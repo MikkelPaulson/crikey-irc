@@ -9,13 +9,20 @@ fn main() -> io::Result<()> {
     let stream = TcpStream::connect("127.0.0.1:6667").expect("Could not connect to server.");
 
     let mut connection = connection::Connection::new(&stream);
-    connection.send_command_raw("NICK foo\r\n".to_string())?;
-    connection.send_command_raw("USER pjohnson local remote :Potato Johnson\r\n".to_string())?;
+    connection.send_command(connection::Command::Nick {
+        nickname: String::from("foo"),
+        hopcount: None,
+    })?;
+    connection.send_command(connection::Command::User {
+        username: String::from("pjohnson"),
+        hostname: String::from("local"),
+        servername: String::from("remote"),
+        realname: String::from("Potato Johnson"),
+    })?;
 
     // hangs on close!
     loop {
         if let Some(data) = connection.poll() {
-            print!("{}", data);
             continue;
         }
         thread::sleep(Duration::from_millis(100));
