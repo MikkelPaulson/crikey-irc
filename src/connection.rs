@@ -48,29 +48,46 @@ impl Connection<'_> {
         self.writer.write(raw_command.as_bytes())?;
         Ok(())
     }
+
+    fn dispatch_message(&self, mut raw_message: String) {
+        let server_name = split_server_name(&mut raw_message);
+
+        if let Some(command) = raw_to_command(&raw_message) {
+            // TODO: dispatch command
+        } else if let Some((reply_type, reply_message)) = raw_to_reply(&raw_message) {
+            // TODO: dispatch reply
+        }
+    }
 }
 
-fn raw_to_command(raw_command: String) -> Option<Command> {
+fn split_server_name(raw_message: &mut String) -> Option<String> {
+    if raw_message.starts_with(':') {
+        let slice_index = raw_message.find(' ')?;
+        let server_name = raw_message[1..slice_index].to_string();
+        raw_message.replace_range(..slice_index + 1, "");
+        Some(server_name)
+    } else {
+        None
+    }
+}
+
+fn raw_to_command(raw_command: &str) -> Option<Command> {
     let command_parts: Vec<&str> = raw_command.split(' ').collect();
 
-    if command_parts.first()?.starts_with(':') {
-        let (_, command_parts) = command_parts.split_at(1);
-    }
-
-    match command_parts.first()? {
-        &"PASS" => {
+    match command_parts.first()?.as_ref() {
+        "PASS" => {
             if command_parts.len() == 2 {
                 Some(Command::Pass {
-                    password: String::from(command_parts[1]),
+                    password: command_parts[1].to_string(),
                 })
             } else {
                 None
             }
         }
-        &"NICK" => {
+        "NICK" => {
             if command_parts.len() >= 2 && command_parts.len() <= 3 {
                 Some(Command::Nick {
-                    nickname: String::from(command_parts[1]),
+                    nickname: command_parts[1].to_string(),
                     hopcount: match command_parts.get(2) {
                         Some(n) => u8::from_str(n).ok(),
                         None => None,
@@ -80,24 +97,24 @@ fn raw_to_command(raw_command: String) -> Option<Command> {
                 None
             }
         }
-        &"USER" => {
+        "USER" => {
             if command_parts.len() >= 5 {
                 Some(Command::User {
-                    username: String::from(command_parts[1]),
-                    hostname: String::from(command_parts[2]),
-                    servername: String::from(command_parts[3]),
-                    realname: String::from(command_parts[4..].join(" ").strip_prefix(":")?),
+                    username: command_parts[1].to_string(),
+                    hostname: command_parts[2].to_string(),
+                    servername: command_parts[3].to_string(),
+                    realname: command_parts[4..].join(" ").strip_prefix(":")?.to_string(),
                 })
             } else {
                 None
             }
         }
-        &"PING" => {
+        "PING" => {
             if command_parts.len() >= 2 && command_parts.len() <= 3 {
                 Some(Command::Ping {
-                    server1: String::from(command_parts[1]),
+                    server1: command_parts[1].to_string(),
                     server2: match command_parts.get(2) {
-                        Some(&server2) => Some(String::from(server2)),
+                        Some(&server2) => Some(server2.to_string()),
                         None => None,
                     },
                 })
@@ -105,12 +122,12 @@ fn raw_to_command(raw_command: String) -> Option<Command> {
                 None
             }
         }
-        &"PONG" => {
+        "PONG" => {
             if command_parts.len() >= 2 && command_parts.len() <= 3 {
                 Some(Command::Pong {
-                    server1: String::from(command_parts[1]),
+                    server1: command_parts[1].to_string(),
                     server2: match command_parts.get(2) {
-                        Some(&server2) => Some(String::from(server2)),
+                        Some(&server2) => Some(server2.to_string()),
                         None => None,
                     },
                 })
@@ -149,12 +166,8 @@ fn command_to_raw(command: Command) -> String {
     }
 }
 
-fn raw_to_reply(raw_reply: String) -> Option<(ReplyType, String)> {
+fn raw_to_reply(raw_reply: &str) -> Option<(ReplyType, String)> {
     let reply_parts: Vec<&str> = raw_reply.split(' ').collect();
-
-    if reply_parts.first()?.starts_with(':') {
-        let (_, reply_parts) = reply_parts.split_at(1);
-    }
 
     let (reply_prefix, reply_body_parts) = reply_parts.split_first()?;
     let reply_body = reply_body_parts.join(" ");
@@ -514,7 +527,7 @@ mod tests {
         assert_eq!(
             "PASS mysecretpass",
             command_to_raw(Command::Pass {
-                password: String::from("mysecretpass"),
+                password: "mysecretpass".to_string(),
             }),
         );
     }
@@ -524,14 +537,14 @@ mod tests {
         assert_eq!(
             "NICK potato",
             command_to_raw(Command::Nick {
-                nickname: String::from("potato"),
+                nickname: "potato".to_string(),
                 hopcount: None,
             }),
         );
         assert_eq!(
             "NICK carrot 5",
             command_to_raw(Command::Nick {
-                nickname: String::from("carrot"),
+                nickname: "carrot".to_string(),
                 hopcount: Some(5),
             }),
         );
@@ -542,10 +555,10 @@ mod tests {
         assert_eq!(
             "USER ab cd ef :gh ij",
             command_to_raw(Command::User {
-                username: String::from("ab"),
-                hostname: String::from("cd"),
-                servername: String::from("ef"),
-                realname: String::from("gh ij"),
+                username: "ab".to_string(),
+                hostname: "cd".to_string(),
+                servername: "ef".to_string(),
+                realname: "gh ij".to_string(),
             }),
         );
     }
@@ -555,15 +568,15 @@ mod tests {
         assert_eq!(
             "PING myserver",
             command_to_raw(Command::Ping {
-                server1: String::from("myserver"),
+                server1: "myserver".to_string(),
                 server2: None,
             }),
         );
         assert_eq!(
             "PING myserver myotherserver",
             command_to_raw(Command::Ping {
-                server1: String::from("myserver"),
-                server2: Some(String::from("myotherserver")),
+                server1: "myserver".to_string(),
+                server2: Some("myotherserver".to_string()),
             }),
         );
     }
@@ -573,22 +586,22 @@ mod tests {
         assert_eq!(
             "PONG myclient",
             command_to_raw(Command::Pong {
-                server1: String::from("myclient"),
+                server1: "myclient".to_string(),
                 server2: None,
             }),
         );
         assert_eq!(
             "PONG myclient myotherclient",
             command_to_raw(Command::Pong {
-                server1: String::from("myclient"),
-                server2: Some(String::from("myotherclient")),
+                server1: "myclient".to_string(),
+                server2: Some("myotherclient".to_string()),
             }),
         );
     }
 
     #[test]
     fn raw_to_command_pass() {
-        let command = raw_to_command(String::from("PASS mysecretpass"));
+        let command = raw_to_command("PASS mysecretpass");
         if let Some(Command::Pass { password }) = command {
             assert_eq!("mysecretpass", password);
         } else {
@@ -598,7 +611,7 @@ mod tests {
 
     #[test]
     fn raw_to_command_nick() {
-        let command = raw_to_command(String::from("NICK somebody"));
+        let command = raw_to_command("NICK somebody");
         if let Some(Command::Nick { nickname, hopcount }) = command {
             assert_eq!("somebody", nickname);
             assert_eq!(None, hopcount);
@@ -606,7 +619,7 @@ mod tests {
             panic!("Wrong type: {:?}", command);
         }
 
-        let command = raw_to_command(String::from("NICK anybody 5"));
+        let command = raw_to_command("NICK anybody 5");
         if let Some(Command::Nick { nickname, hopcount }) = command {
             assert_eq!("anybody", nickname);
             assert_eq!(Some(5), hopcount);
@@ -614,7 +627,7 @@ mod tests {
             panic!("Wrong type: {:?}", command);
         }
 
-        let command = raw_to_command(String::from("NICK anybody potato"));
+        let command = raw_to_command("NICK anybody potato");
         if let Some(Command::Nick { nickname, hopcount }) = command {
             assert_eq!("anybody", nickname);
             assert_eq!(None, hopcount);
@@ -625,11 +638,11 @@ mod tests {
 
     #[test]
     fn raw_to_command_user() {
-        assert!(raw_to_command(String::from("USER pjohnson local remote")).is_none());
-        assert!(raw_to_command(String::from("USER pjohnson local remote realname")).is_none());
-        assert!(raw_to_command(String::from("USER pjohnson local :remote realname")).is_none());
+        assert!(raw_to_command("USER pjohnson local remote").is_none());
+        assert!(raw_to_command("USER pjohnson local remote realname").is_none());
+        assert!(raw_to_command("USER pjohnson local :remote realname").is_none());
 
-        let command = raw_to_command(String::from("USER pjohnson local remote :Potato Johnson"));
+        let command = raw_to_command("USER pjohnson local remote :Potato Johnson");
         if let Some(Command::User {
             username,
             hostname,
@@ -648,7 +661,7 @@ mod tests {
 
     #[test]
     fn raw_to_command_ping() {
-        let command = raw_to_command(String::from("PING myserver"));
+        let command = raw_to_command("PING myserver");
         if let Some(Command::Ping { server1, server2 }) = command {
             assert_eq!("myserver", server1);
             assert!(server2.is_none());
@@ -656,21 +669,21 @@ mod tests {
             panic!("Wrong type: {:?}", command);
         }
 
-        let command = raw_to_command(String::from("PING myserver myotherserver"));
+        let command = raw_to_command("PING myserver myotherserver");
         if let Some(Command::Ping { server1, server2 }) = command {
             assert_eq!("myserver", server1);
-            assert_eq!(Some(String::from("myotherserver")), server2);
+            assert_eq!(Some("myotherserver".to_string()), server2);
         } else {
             panic!("Wrong type: {:?}", command);
         }
 
-        assert!(raw_to_command(String::from("PING")).is_none());
-        assert!(raw_to_command(String::from("PING a b c")).is_none());
+        assert!(raw_to_command("PING").is_none());
+        assert!(raw_to_command("PING a b c").is_none());
     }
 
     #[test]
     fn raw_to_command_pong() {
-        let command = raw_to_command(String::from("PONG myclient"));
+        let command = raw_to_command("PONG myclient");
         if let Some(Command::Pong { server1, server2 }) = command {
             assert_eq!("myclient", server1);
             assert!(server2.is_none());
@@ -678,15 +691,65 @@ mod tests {
             panic!("Wrong type: {:?}", command);
         }
 
-        let command = raw_to_command(String::from("PONG myclient myotherclient"));
+        let command = raw_to_command("PONG myclient myotherclient");
         if let Some(Command::Pong { server1, server2 }) = command {
             assert_eq!("myclient", server1);
-            assert_eq!(Some(String::from("myotherclient")), server2);
+            assert_eq!(Some("myotherclient".to_string()), server2);
         } else {
             panic!("Wrong type: {:?}", command);
         }
 
-        assert!(raw_to_command(String::from("PONG")).is_none());
-        assert!(raw_to_command(String::from("PONG a b c")).is_none());
+        assert!(raw_to_command("PONG").is_none());
+        assert!(raw_to_command("PONG a b c").is_none());
+    }
+
+    #[test]
+    fn split_server_name_with_name() {
+        let mut command =
+            ":irc.example.net 001 foo :Welcome to the Internet Relay Network".to_string();
+        let result = split_server_name(&mut command);
+
+        assert_eq!("001 foo :Welcome to the Internet Relay Network", command);
+        assert_eq!(Some("irc.example.net".to_string()), result);
+    }
+
+    #[test]
+    fn split_server_name_no_name() {
+        let mut command = "001 foo :Welcome to the Internet Relay Network".to_string();
+        let result = split_server_name(&mut command);
+
+        assert_eq!("001 foo :Welcome to the Internet Relay Network", command);
+        assert_eq!(None, result);
+    }
+
+    #[test]
+    fn split_server_name_missing_colon() {
+        let mut command =
+            "irc.example.net 001 foo :Welcome to the Internet Relay Network".to_string();
+        let result = split_server_name(&mut command);
+
+        assert_eq!(
+            "irc.example.net 001 foo :Welcome to the Internet Relay Network",
+            command
+        );
+        assert_eq!(None, result);
+    }
+
+    #[test]
+    fn split_server_name_server_only() {
+        let mut command = ":irc.example.net".to_string();
+        let result = split_server_name(&mut command);
+
+        assert_eq!(":irc.example.net", command);
+        assert_eq!(None, result);
+    }
+
+    #[test]
+    fn split_server_name_trailing_space() {
+        let mut command = ":irc.example.net ".to_string();
+        let result = split_server_name(&mut command);
+
+        assert_eq!("", command);
+        assert_eq!(Some("irc.example.net".to_string()), result);
     }
 }
