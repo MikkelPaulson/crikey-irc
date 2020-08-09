@@ -5,27 +5,35 @@ use std::time::Duration;
 
 mod connection;
 mod dispatcher;
+mod terminal;
 
 fn main() -> io::Result<()> {
     let stream = TcpStream::connect("127.0.0.1:6667").expect("Could not connect to server.");
 
     let mut connection = connection::Connection::new(&stream);
     connection.send_command(connection::Command::Nick {
-        nickname: String::from("foo"),
+        nickname: "foo".to_string(),
         hopcount: None,
     })?;
     connection.send_command(connection::Command::User {
-        username: String::from("pjohnson"),
-        hostname: String::from("local"),
-        servername: String::from("remote"),
-        realname: String::from("Potato Johnson"),
+        username: "pjohnson".to_string(),
+        hostname: "local".to_string(),
+        servername: "remote".to_string(),
+        realname: "Potato Johnson".to_string(),
     })?;
 
-    // hangs on close!
+    let terminal = terminal::Terminal::new(io::stdin());
+
     loop {
-        if let Some(data) = connection.poll() {
+        if connection.poll() {
             continue;
         }
+
+        if let Some(mut input) = terminal.read() {
+            input.pop(); // trim trailing newline
+            connection.send_command_raw(input)?;
+        }
+
         thread::sleep(Duration::from_millis(100));
     }
 

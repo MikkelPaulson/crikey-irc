@@ -20,7 +20,7 @@ impl Connection<'_> {
         }
     }
 
-    pub fn poll(&mut self) -> Option<String> {
+    pub fn poll(&mut self) -> bool {
         let mut buffer = String::new();
 
         match self.reader.read_line(&mut buffer) {
@@ -29,10 +29,11 @@ impl Connection<'_> {
                     panic!("Stream disconnected");
                 } else {
                     print!("< {}", buffer);
-                    Some(buffer)
+                    self.dispatch_message(buffer);
+                    true
                 }
             }
-            Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => None,
+            Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => false,
             Err(e) => panic!("IO error: {}", e),
         }
     }
