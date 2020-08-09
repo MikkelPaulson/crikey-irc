@@ -58,19 +58,66 @@ fn raw_to_command(raw_command: String) -> Option<Command> {
     }
 
     match command_parts.first()? {
-        &"PASS" => Some(Command::Pass {
-            password: String::from(command_parts[1]),
-        }),
-        &"NICK" => Some(Command::Nick {
-            nickname: String::from(command_parts[1]),
-            hopcount: u8::from_str(command_parts[2]).ok(),
-        }),
-        &"USER" => Some(Command::User {
-            username: String::from(command_parts[1]),
-            hostname: String::from(command_parts[2]),
-            servername: String::from(command_parts[3]),
-            realname: String::from(command_parts[4..].join(" ").strip_prefix(":")?),
-        }),
+        &"PASS" => {
+            if command_parts.len() == 2 {
+                Some(Command::Pass {
+                    password: String::from(command_parts[1]),
+                })
+            } else {
+                None
+            }
+        }
+        &"NICK" => {
+            if command_parts.len() >= 2 && command_parts.len() <= 3 {
+                Some(Command::Nick {
+                    nickname: String::from(command_parts[1]),
+                    hopcount: match command_parts.get(2) {
+                        Some(n) => u8::from_str(n).ok(),
+                        None => None,
+                    },
+                })
+            } else {
+                None
+            }
+        }
+        &"USER" => {
+            if command_parts.len() >= 5 {
+                Some(Command::User {
+                    username: String::from(command_parts[1]),
+                    hostname: String::from(command_parts[2]),
+                    servername: String::from(command_parts[3]),
+                    realname: String::from(command_parts[4..].join(" ").strip_prefix(":")?),
+                })
+            } else {
+                None
+            }
+        }
+        &"PING" => {
+            if command_parts.len() >= 2 && command_parts.len() <= 3 {
+                Some(Command::Ping {
+                    server1: String::from(command_parts[1]),
+                    server2: match command_parts.get(2) {
+                        Some(&server2) => Some(String::from(server2)),
+                        None => None,
+                    },
+                })
+            } else {
+                None
+            }
+        }
+        &"PONG" => {
+            if command_parts.len() >= 2 && command_parts.len() <= 3 {
+                Some(Command::Pong {
+                    daemon1: String::from(command_parts[1]),
+                    daemon2: match command_parts.get(2) {
+                        Some(&daemon2) => Some(String::from(daemon2)),
+                        None => None,
+                    },
+                })
+            } else {
+                None
+            }
+        }
         _ => None,
     }
 }
@@ -244,11 +291,83 @@ mod tests {
 
     #[test]
     fn raw_to_command_pass() {
-        if let Some(Command::Pass { password }) = raw_to_command(String::from("PASS mysecretpass"))
-        {
+        let command = raw_to_command(String::from("PASS mysecretpass"));
+        if let Some(Command::Pass { password }) = command {
             assert_eq!("mysecretpass", password);
         } else {
-            panic!("Wrong type!")
+            panic!("Wrong type: {:?}", command);
         }
+    }
+
+    #[test]
+    fn raw_to_command_nick() {
+        let command = raw_to_command(String::from("NICK somebody"));
+        if let Some(Command::Nick { nickname, hopcount }) = command {
+            assert_eq!("somebody", nickname);
+            assert_eq!(None, hopcount);
+        } else {
+            panic!("Wrong type: {:?}", command);
+        }
+
+        let command = raw_to_command(String::from("NICK anybody 5"));
+        if let Some(Command::Nick { nickname, hopcount }) = command {
+            assert_eq!("anybody", nickname);
+            assert_eq!(Some(5), hopcount);
+        } else {
+            panic!("Wrong type: {:?}", command);
+        }
+
+        let command = raw_to_command(String::from("NICK anybody potato"));
+        if let Some(Command::Nick { nickname, hopcount }) = command {
+            assert_eq!("anybody", nickname);
+            assert_eq!(None, hopcount);
+        } else {
+            panic!("Wrong type: {:?}", command);
+        }
+    }
+
+    #[test]
+    fn raw_to_command_user() {
+        assert!(raw_to_command(String::from("USER pjohnson local remote")).is_none());
+        assert!(raw_to_command(String::from("USER pjohnson local remote realname")).is_none());
+        assert!(raw_to_command(String::from("USER pjohnson local :remote realname")).is_none());
+
+        let command = raw_to_command(String::from("USER pjohnson local remote :Potato Johnson"));
+        if let Some(Command::User {
+            username,
+            hostname,
+            servername,
+            realname,
+        }) = command
+        {
+            assert_eq!("pjohnson", username);
+            assert_eq!("local", hostname);
+            assert_eq!("remote", servername);
+            assert_eq!("Potato Johnson", realname);
+        } else {
+            panic!("Wrong type: {:?}", command);
+        }
+    }
+
+    #[test]
+    fn raw_to_command_ping() {
+        let command = raw_to_command(String::from("PING myserver"));
+        if let Some(Command::Ping { server1, server2 }) = command {
+            assert_eq!("myserver", server1);
+            assert!(server2.is_none());
+        } else {
+            panic!("Wrong type: {:?}", command);
+        }
+
+        let command = raw_to_command(String::from("PING myserver myotherserver"));
+        if let Some(Command::Ping { server1, server2 }) = command {
+            assert_eq!("myserver", server1);
+            assert_eq!(Some(String::from("myotherserver")), server2);
+        } else {
+            panic!("Wrong type: {:?}", command);
+        }
+
+        assert!(raw_to_command(String::from("PING")).is_none());
+        assert!(raw_to_command(String::from("PING a b c")).is_none());
     }
 }
