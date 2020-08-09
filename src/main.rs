@@ -4,6 +4,7 @@ use std::thread;
 use std::time::Duration;
 
 mod connection;
+mod dispatcher;
 
 fn main() -> io::Result<()> {
     let stream = TcpStream::connect("127.0.0.1:6667").expect("Could not connect to server.");
