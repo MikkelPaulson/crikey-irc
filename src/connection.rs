@@ -356,7 +356,19 @@ pub enum Command {
     },
 }
 
-#[derive(Hash, Eq, PartialEq)]
+impl Command {
+    pub fn to_command_type(&self) -> CommandType {
+        match self {
+            Command::Pass { .. } => CommandType::Pass,
+            Command::Nick { .. } => CommandType::Nick,
+            Command::User { .. } => CommandType::User,
+            Command::Ping { .. } => CommandType::Ping,
+            Command::Pong { .. } => CommandType::Pong,
+        }
+    }
+}
+
+#[derive(Hash, Eq, PartialEq, Debug)]
 pub enum CommandType {
     // Connection registration
     Pass,
@@ -522,6 +534,67 @@ pub enum ReplyType {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn to_command_type_pass() {
+        assert_eq!(
+            CommandType::Pass,
+            Command::Pass {
+                password: "mypass".to_string()
+            }
+            .to_command_type(),
+        );
+    }
+
+    #[test]
+    fn to_command_type_nick() {
+        assert_eq!(
+            CommandType::Nick,
+            Command::Nick {
+                nickname: "me".to_string(),
+                hopcount: None
+            }
+            .to_command_type(),
+        );
+    }
+
+    #[test]
+    fn to_command_type_user() {
+        assert_eq!(
+            CommandType::User,
+            Command::User {
+                username: "pjohnson".to_string(),
+                hostname: "local".to_string(),
+                servername: "remote".to_string(),
+                realname: "Potato Johnson".to_string(),
+            }
+            .to_command_type(),
+        );
+    }
+
+    #[test]
+    fn to_command_type_ping() {
+        assert_eq!(
+            CommandType::Ping,
+            Command::Ping {
+                server1: "myserver".to_string(),
+                server2: None
+            }
+            .to_command_type(),
+        );
+    }
+
+    #[test]
+    fn to_command_type_pong() {
+        assert_eq!(
+            CommandType::Pong,
+            Command::Pong {
+                server1: "myclient".to_string(),
+                server2: None
+            }
+            .to_command_type(),
+        );
+    }
 
     #[test]
     fn command_to_raw_pass() {
