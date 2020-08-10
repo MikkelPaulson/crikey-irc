@@ -390,7 +390,7 @@ pub enum CommandType {
     Pong,
 }
 
-#[derive(Hash, Eq, PartialEq)]
+#[derive(Hash, Eq, PartialEq, Debug)]
 pub enum ReplyType {
     RplWelcome,           // 001 - "Welcome to the Internet Relay Network
     RplYourHost,          // 002 - "Your host is <servername>, running version <ver>"
