@@ -1,3 +1,4 @@
+use crate::dispatcher;
 use std::io;
 use std::io::prelude::*;
 use std::net;
@@ -6,10 +7,11 @@ use std::str::FromStr;
 pub struct Connection<'a> {
     reader: Box<dyn 'a + io::BufRead>,
     writer: Box<dyn 'a + Write>,
+    dispatcher: Box<dyn dispatcher::Dispatch>,
 }
 
-impl Connection<'_> {
-    pub fn new(stream: &net::TcpStream) -> Connection {
+impl<'a> Connection<'a> {
+    pub fn new(stream: &'a net::TcpStream, dispatcher: dispatcher::Dispatcher) -> Connection<'a> {
         stream.set_nonblocking(true).unwrap();
 
         let reader = io::BufReader::new(stream);
@@ -17,6 +19,7 @@ impl Connection<'_> {
         Connection {
             reader: Box::new(reader),
             writer: Box::new(stream),
+            dispatcher: Box::new(dispatcher),
         }
     }
 
@@ -50,13 +53,13 @@ impl Connection<'_> {
         Ok(())
     }
 
-    fn dispatch_message(&self, mut raw_message: String) {
-        let server_name = split_server_name(&mut raw_message);
+    fn dispatch_message(&mut self, mut raw_message: String) {
+        split_server_name(&mut raw_message);
 
         if let Some(command) = raw_to_command(&raw_message) {
-            // TODO: dispatch command
+            self.dispatcher.handle_command(command);
         } else if let Some((reply_type, reply_message)) = raw_to_reply(&raw_message) {
-            // TODO: dispatch reply
+            self.dispatcher.handle_reply(reply_type, reply_message);
         }
     }
 }

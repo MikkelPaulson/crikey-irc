@@ -10,7 +10,12 @@ mod terminal;
 fn main() -> io::Result<()> {
     let stream = TcpStream::connect("127.0.0.1:6667").expect("Could not connect to server.");
 
-    let mut connection = connection::Connection::new(&stream);
+    let dispatcher = dispatcher::Dispatcher::new();
+
+    let mut connection = connection::Connection::new(&stream, dispatcher);
+
+    let terminal = terminal::Terminal::new(io::stdin());
+
     connection.send_command(connection::Command::Nick {
         nickname: "foo".to_string(),
         hopcount: None,
@@ -21,8 +26,6 @@ fn main() -> io::Result<()> {
         servername: "remote".to_string(),
         realname: "Potato Johnson".to_string(),
     })?;
-
-    let terminal = terminal::Terminal::new(io::stdin());
 
     loop {
         if connection.poll() {
