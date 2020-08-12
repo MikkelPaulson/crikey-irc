@@ -7,11 +7,14 @@ use std::str::FromStr;
 pub struct Connection<'a> {
     reader: Box<dyn 'a + io::BufRead>,
     writer: Box<dyn 'a + Write>,
-    dispatcher: Box<dyn dispatcher::Dispatch>,
+    dispatcher: Box<dyn 'a + dispatcher::Dispatch<'a>>,
 }
 
 impl<'a> Connection<'a> {
-    pub fn new(stream: &'a net::TcpStream, dispatcher: dispatcher::Dispatcher) -> Connection<'a> {
+    pub fn new(
+        stream: &'a net::TcpStream,
+        dispatcher: dispatcher::Dispatcher<'a>,
+    ) -> Connection<'a> {
         stream.set_nonblocking(true).unwrap();
 
         let reader = io::BufReader::new(stream);

@@ -1,16 +1,16 @@
 use crate::connection;
 use std::collections::HashMap;
 
-pub trait Dispatch {
+pub trait Dispatch<'a> {
     fn register_command_listener(
         &mut self,
         command_type: connection::CommandType,
-        command_listener: &'static dyn Fn(&connection::Command),
+        command_listener: &'a dyn Fn(&connection::Command),
     );
 
     fn register_reply_listener(
         &mut self,
-        reply_listener: &'static dyn Fn(&connection::ReplyType, &String) -> bool,
+        reply_listener: &'a dyn Fn(&connection::ReplyType, &String) -> bool,
     );
 
     fn handle_command(&mut self, command: connection::Command);
@@ -18,14 +18,14 @@ pub trait Dispatch {
     fn handle_reply(&mut self, reply_type: connection::ReplyType, message: String);
 }
 
-pub struct Dispatcher {
+pub struct Dispatcher<'a> {
     command_listeners:
-        HashMap<connection::CommandType, Vec<Box<dyn 'static + Fn(&connection::Command)>>>,
-    reply_listeners: Vec<Box<dyn 'static + Fn(&connection::ReplyType, &String) -> bool>>,
+        HashMap<connection::CommandType, Vec<Box<dyn 'a + Fn(&connection::Command)>>>,
+    reply_listeners: Vec<Box<dyn 'a + Fn(&connection::ReplyType, &String) -> bool>>,
 }
 
-impl Dispatcher {
-    pub fn new() -> Dispatcher {
+impl<'a> Dispatcher<'a> {
+    pub fn new() -> Dispatcher<'a> {
         Dispatcher {
             command_listeners: HashMap::new(),
             reply_listeners: Vec::new(),
@@ -33,11 +33,11 @@ impl Dispatcher {
     }
 }
 
-impl Dispatch for Dispatcher {
+impl<'a> Dispatch<'a> for Dispatcher<'a> {
     fn register_command_listener(
         &mut self,
         command_type: connection::CommandType,
-        command_listener: &'static dyn Fn(&connection::Command),
+        command_listener: &'a dyn Fn(&connection::Command),
     ) {
         self.command_listeners
             .entry(command_type)
@@ -47,7 +47,7 @@ impl Dispatch for Dispatcher {
 
     fn register_reply_listener(
         &mut self,
-        reply_listener: &'static dyn Fn(&connection::ReplyType, &String) -> bool,
+        reply_listener: &'a dyn Fn(&connection::ReplyType, &String) -> bool,
     ) {
         self.reply_listeners.push(Box::new(reply_listener));
     }
