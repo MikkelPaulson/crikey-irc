@@ -17,13 +17,13 @@ pub trait Connect {
 pub struct Connection<'a> {
     reader: Box<dyn 'a + io::BufRead>,
     writer: Box<dyn 'a + Write>,
-    dispatcher: Rc<RefCell<dyn 'a + dispatcher::Dispatch<'a>>>,
+    dispatcher: Rc<RefCell<dyn 'a + dispatcher::Dispatch>>,
 }
 
 impl<'a> Connection<'a> {
     pub fn new(
         stream: &'a net::TcpStream,
-        dispatcher: Rc<RefCell<dispatcher::Dispatcher<'a>>>,
+        dispatcher: Rc<RefCell<dispatcher::Dispatcher>>,
     ) -> Connection<'a> {
         stream.set_nonblocking(true).unwrap();
 

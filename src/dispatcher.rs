@@ -1,16 +1,16 @@
 use crate::connection;
 use std::collections::HashMap;
 
-pub trait Dispatch<'a> {
+pub trait Dispatch {
     fn register_command_listener(
         &mut self,
         command_type: connection::CommandType,
-        command_listener: &'a dyn Fn(&connection::Command),
+        command_listener: Box<dyn Fn(&connection::Command)>,
     );
 
     fn register_reply_listener(
         &mut self,
-        reply_listener: &'a dyn Fn(&connection::ReplyType, &String) -> bool,
+        reply_listener: Box<dyn Fn(&connection::ReplyType, &String) -> bool>,
     );
 
     fn handle_command(&mut self, command: connection::Command);
@@ -18,14 +18,14 @@ pub trait Dispatch<'a> {
     fn handle_reply(&mut self, reply_type: connection::ReplyType, message: String);
 }
 
-pub struct Dispatcher<'a> {
+pub struct Dispatcher {
     command_listeners:
-        HashMap<connection::CommandType, Vec<Box<dyn 'a + Fn(&connection::Command)>>>,
-    reply_listeners: Vec<Box<dyn 'a + Fn(&connection::ReplyType, &String) -> bool>>,
+        HashMap<connection::CommandType, Vec<Box<dyn Fn(&connection::Command)>>>,
+    reply_listeners: Vec<Box<dyn Fn(&connection::ReplyType, &String) -> bool>>,
 }
 
-impl<'a> Dispatcher<'a> {
-    pub fn new() -> Dispatcher<'a> {
+impl Dispatcher {
+    pub fn new() -> Dispatcher {
         Dispatcher {
             command_listeners: HashMap::new(),
             reply_listeners: Vec::new(),
@@ -33,23 +33,23 @@ impl<'a> Dispatcher<'a> {
     }
 }
 
-impl<'a> Dispatch<'a> for Dispatcher<'a> {
+impl Dispatch for Dispatcher {
     fn register_command_listener(
         &mut self,
         command_type: connection::CommandType,
-        command_listener: &'a dyn Fn(&connection::Command),
+        command_listener: Box<dyn Fn(&connection::Command)>,
     ) {
         self.command_listeners
             .entry(command_type)
             .or_insert(Vec::new())
-            .push(Box::new(command_listener));
+            .push(command_listener);
     }
 
     fn register_reply_listener(
         &mut self,
-        reply_listener: &'a dyn Fn(&connection::ReplyType, &String) -> bool,
+        reply_listener: Box<dyn Fn(&connection::ReplyType, &String) -> bool>,
     ) {
-        self.reply_listeners.push(Box::new(reply_listener));
+        self.reply_listeners.push(reply_listener);
     }
 
     fn handle_command(&mut self, command: connection::Command) {
@@ -83,10 +83,10 @@ mod tests {
     fn command_listener_match() {
         let mut dispatcher = Dispatcher::new();
 
-        dispatcher.register_command_listener(connection::CommandType::Pass, &|_| {});
-        dispatcher.register_command_listener(connection::CommandType::Pass, &|command| {
+        dispatcher.register_command_listener(connection::CommandType::Pass, Box::new(|_| {}));
+        dispatcher.register_command_listener(connection::CommandType::Pass, Box::new(|command| {
             panic!("Test passed: {:?}", command);
-        });
+        }));
         dispatcher.handle_command(connection::Command::Pass {
             password: "abc".to_string(),
         });
@@ -96,9 +96,9 @@ mod tests {
     fn command_listener_no_match() {
         let mut dispatcher = Dispatcher::new();
 
-        dispatcher.register_command_listener(connection::CommandType::Nick, &|command| {
+        dispatcher.register_command_listener(connection::CommandType::Nick, Box::new(|command| {
             panic!("Test failed: {:?}", command);
-        });
+        }));
         dispatcher.handle_command(connection::Command::Pass {
             password: "abc".to_string(),
         });
@@ -109,10 +109,10 @@ mod tests {
     fn reply_listener_runs() {
         let mut dispatcher = Dispatcher::new();
 
-        dispatcher.register_reply_listener(&|_, _| true);
-        dispatcher.register_reply_listener(&|reply_type, message| {
+        dispatcher.register_reply_listener(Box::new(|_, _| true));
+        dispatcher.register_reply_listener(Box::new(|reply_type, message| {
             panic!("Test passed: {:?} {:?}", reply_type, message);
-        });
+        }));
         dispatcher.handle_reply(
             connection::ReplyType::ErrYoureBannedCreep,
             "You're banned, creep!".to_string(),
@@ -124,12 +124,12 @@ mod tests {
     fn reply_listener_persists() {
         let mut dispatcher = Dispatcher::new();
 
-        dispatcher.register_reply_listener(&|reply_type, message| {
+        dispatcher.register_reply_listener(Box::new(|reply_type, message| {
             if message == "Message 2" {
                 panic!("Test passed: {:?} {:?}", reply_type, message)
             }
             true // true to persist the listener between invocations
-        });
+        }));
 
         dispatcher.handle_reply(connection::ReplyType::RplWelcome, "Message 1".to_string());
         dispatcher.handle_reply(connection::ReplyType::RplYourHost, "Message 2".to_string());
@@ -139,12 +139,12 @@ mod tests {
     fn reply_listener_unregisters_itself() {
         let mut dispatcher = Dispatcher::new();
 
-        dispatcher.register_reply_listener(&|reply_type, message| {
+        dispatcher.register_reply_listener(Box::new(|reply_type, message| {
             if message == "Message 2" {
                 panic!("Test failed: {:?} {:?}", reply_type, message)
             }
             false // false to unregister the listener after the first run
-        });
+        }));
 
         dispatcher.handle_reply(connection::ReplyType::RplWelcome, "Message 1".to_string());
         dispatcher.handle_reply(connection::ReplyType::RplYourHost, "Message 2".to_string());

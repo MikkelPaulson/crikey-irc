@@ -6,6 +6,7 @@ use std::rc::Rc;
 use std::thread;
 use std::time::Duration;
 
+mod client;
 mod connection;
 mod dispatcher;
 mod terminal;
@@ -19,6 +20,11 @@ fn main() -> io::Result<()> {
         &stream,
         dispatcher.clone(),
     )));
+
+    let client = client::Client::new(
+        connection.clone(),
+        dispatcher.clone()
+    );
 
     let terminal = terminal::Terminal::new(io::stdin());
 
