@@ -6,6 +6,14 @@ use std::net;
 use std::rc::Rc;
 use std::str::FromStr;
 
+pub trait Connect {
+    fn poll(&mut self) -> bool;
+
+    fn send_command(&mut self, command: Command) -> std::io::Result<()>;
+
+    fn send_command_raw(&mut self, raw_command: String) -> std::io::Result<()>;
+}
+
 pub struct Connection<'a> {
     reader: Box<dyn 'a + io::BufRead>,
     writer: Box<dyn 'a + Write>,
@@ -28,7 +36,20 @@ impl<'a> Connection<'a> {
         }
     }
 
-    pub fn poll(&mut self) -> bool {
+    fn dispatch_message(&mut self, mut raw_message: String) {
+        split_server_name(&mut raw_message);
+        let mut dispatcher = self.dispatcher.borrow_mut();
+
+        if let Some(command) = raw_to_command(&raw_message) {
+            dispatcher.handle_command(command);
+        } else if let Some((reply_type, reply_message)) = raw_to_reply(&raw_message) {
+            dispatcher.handle_reply(reply_type, reply_message);
+        }
+    }
+}
+
+impl<'a> Connect for Connection<'a> {
+    fn poll(&mut self) -> bool {
         let mut buffer = String::new();
 
         match self.reader.read_line(&mut buffer) {
@@ -46,27 +67,16 @@ impl<'a> Connection<'a> {
         }
     }
 
-    pub fn send_command(&mut self, command: Command) -> std::io::Result<()> {
+    fn send_command(&mut self, command: Command) -> std::io::Result<()> {
         let raw_command = command_to_raw(command);
         self.send_command_raw(raw_command)
     }
 
-    pub fn send_command_raw(&mut self, mut raw_command: String) -> std::io::Result<()> {
+    fn send_command_raw(&mut self, mut raw_command: String) -> std::io::Result<()> {
         raw_command.push_str("\r\n");
         print!("> {}", raw_command);
         self.writer.write(raw_command.as_bytes())?;
         Ok(())
-    }
-
-    fn dispatch_message(&mut self, mut raw_message: String) {
-        split_server_name(&mut raw_message);
-        let mut dispatcher = self.dispatcher.borrow_mut();
-
-        if let Some(command) = raw_to_command(&raw_message) {
-            dispatcher.handle_command(command);
-        } else if let Some((reply_type, reply_message)) = raw_to_reply(&raw_message) {
-            dispatcher.handle_reply(reply_type, reply_message);
-        }
     }
 }
 
