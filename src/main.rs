@@ -1,5 +1,7 @@
+use std::cell::RefCell;
 use std::io;
 use std::net::TcpStream;
+use std::rc::Rc;
 use std::thread;
 use std::time::Duration;
 
@@ -10,9 +12,9 @@ mod terminal;
 fn main() -> io::Result<()> {
     let stream = TcpStream::connect("127.0.0.1:6667").expect("Could not connect to server.");
 
-    let dispatcher = dispatcher::Dispatcher::new();
+    let dispatcher = Rc::new(RefCell::new(dispatcher::Dispatcher::new()));
 
-    let mut connection = connection::Connection::new(&stream, dispatcher);
+    let mut connection = connection::Connection::new(&stream, dispatcher.clone());
 
     let terminal = terminal::Terminal::new(io::stdin());
 
