@@ -5,6 +5,15 @@ priority is correctly implementing the IRC protocol in idiomatic Rust. Maybe
 once that's done I'll want to continue development into a fully-functional bot,
 or make this into one or more Cargo crates.
 
+## Current state of development
+
+The bot currently successfully connects to an IRC server (currently hard-coded).
+It then authenticates with the server (credentials also hard-coded). All data
+sent and received is output in raw form directly to the terminal, where the user
+can type additional commands. There is no further automation in place, including
+responding to PING commands, so without human intervention, the connection will
+time out after a few minutes.
+
 ## Modules
 
 ### connection.rs
@@ -59,7 +68,7 @@ to the command ID 123, please route my message accordingly".
 
 ### client.rs
 
-**State of development: started**
+**State of development: started (issue #3)**
 
 The `Client` applies a semantic layer on top of the `Connection`. While the
 `Connection` sends and receives enums, it makes no attempt to understand their
@@ -72,7 +81,7 @@ value objects for things like Channels and Users.
 
 ### bot.rs
 
-**State of development: not started**
+**State of development: not started (issue #4)**
 
 The `Bot` will interact with the `Client` to define automated behaviour flows, such
 as responding to user messages or watching for particular keywords in a channel.
