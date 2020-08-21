@@ -1,0 +1,17 @@
+version: "3.7"
+
+services:
+  irc-server:
+    image: wildflyext/ircd:23
+    ## Uncomment the following to expose the server at localhost:6667, eg. if
+    ## you want to interact with the bot using your own client.
+    #ports:
+    #  - 6667
+
+  irustc-bot:
+    build:
+      context: .
+    depends_on:
+      - irc-server
+    volumes:
+      - .:/usr/src/irustc-bot

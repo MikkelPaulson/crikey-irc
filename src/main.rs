@@ -12,7 +12,7 @@ mod dispatcher;
 mod terminal;
 
 fn main() -> io::Result<()> {
-    let stream = TcpStream::connect("127.0.0.1:6667").expect("Could not connect to server.");
+    let stream = TcpStream::connect("irc-server:6667").expect("Could not connect to server.");
 
     let dispatcher = Rc::new(RefCell::new(dispatcher::Dispatcher::new()));
 
@@ -31,7 +31,7 @@ fn main() -> io::Result<()> {
     connection
         .borrow_mut()
         .send_command(connection::Command::Nick {
-            nickname: "foo".to_string(),
+            nickname: "baz".to_string(),
             hopcount: None,
         })?;
     connection

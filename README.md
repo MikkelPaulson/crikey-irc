@@ -5,6 +5,41 @@ priority is correctly implementing the IRC protocol in idiomatic Rust. Maybe
 once that's done I'll want to continue development into a fully-functional bot,
 or make this into one or more Cargo crates.
 
+## Getting started (for users)
+
+There's really nothing to use, yet. Sorry.
+
+## Getting started (for developers)
+
+To get up and running with a local environment, you will need
+[Docker](https://docs.docker.com/get-docker/) and
+[Docker Compose](https://docs.docker.com/compose/install/) (if it's not already
+provided with your Docker install). You do not need Rust installed on your host
+machine, though it's obviously useful if you intend to write code.
+
+Next, check out the repository. From the project root, run:
+
+    docker-compose build
+    docker-compose run --rm irustc-bot
+
+The "command line" provided by irustc-bot allows you to send commands directly
+to the IRC server using the bot's connection. To quit the bot, close the
+connection by typing `QUIT`.
+
+The IRC server will continue running in the background after the bot has been
+shut down. This is a limitation with Docker Compose. It can be shut down using
+
+    docker-compose down
+
+## Current state of development
+
+The bot currently successfully connects to an IRC server (currently hard-coded).
+It then authenticates with the server (credentials also hard-coded). All data
+sent and received is output in raw form directly to the terminal, where the user
+can type additional commands. There is no further automation in place, including
+responding to PING commands, so without human intervention, the connection will
+time out after a few minutes.
+
 ## Modules
 
 ### connection.rs
@@ -59,7 +94,7 @@ to the command ID 123, please route my message accordingly".
 
 ### client.rs
 
-**State of development: started**
+**State of development: started (issue #3)**
 
 The `Client` applies a semantic layer on top of the `Connection`. While the
 `Connection` sends and receives enums, it makes no attempt to understand their
@@ -72,7 +107,7 @@ value objects for things like Channels and Users.
 
 ### bot.rs
 
-**State of development: not started**
+**State of development: not started (issue #4)**
 
 The `Bot` will interact with the `Client` to define automated behaviour flows, such
 as responding to user messages or watching for particular keywords in a channel.
