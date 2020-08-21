@@ -5,6 +5,32 @@ priority is correctly implementing the IRC protocol in idiomatic Rust. Maybe
 once that's done I'll want to continue development into a fully-functional bot,
 or make this into one or more Cargo crates.
 
+## Getting started (for users)
+
+There's really nothing to use, yet. Sorry.
+
+## Getting started (for developers)
+
+To get up and running with a local environment, you will need
+[Docker](https://docs.docker.com/get-docker/) and
+[Docker Compose](https://docs.docker.com/compose/install/) (if it's not already
+provided with your Docker install). You do not need Rust installed on your host
+machine, though it's obviously useful if you intend to write code.
+
+Next, check out the repository. From the project root, run:
+
+    docker-compose build
+    docker-compose run --rm irustc-bot
+
+The "command line" provided by irustc-bot allows you to send commands directly
+to the IRC server using the bot's connection. To quit the bot, close the
+connection by typing `QUIT`.
+
+The IRC server will continue running in the background after the bot has been
+shut down. This is a limitation with Docker Compose. It can be shut down using
+
+    docker-compose down
+
 ## Current state of development
 
 The bot currently successfully connects to an IRC server (currently hard-coded).
