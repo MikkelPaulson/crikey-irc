@@ -1,7 +1,7 @@
-use std::cell::RefCell;
-use std::rc::Rc;
 use crate::connection;
 use crate::dispatcher;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 pub struct Client<'a> {
     connection: Rc<RefCell<dyn 'a + connection::Connect>>,
@@ -11,22 +11,23 @@ pub struct Client<'a> {
 impl<'a> Client<'a> {
     pub fn new(
         connection: Rc<RefCell<connection::Connection<'a>>>,
-        dispatcher: Rc<RefCell<dyn 'a + dispatcher::Dispatch>>
+        dispatcher: Rc<RefCell<dyn 'a + dispatcher::Dispatch>>,
     ) -> Client<'a> {
         Client {
             connection,
-            dispatcher
+            dispatcher,
         }
     }
 
     fn pong(&self, command: &connection::Command) {
         if let connection::Command::Ping { server1, .. } = command {
-            self.connection.borrow_mut().send_command(
-                connection::Command::Pong {
+            self.connection
+                .borrow_mut()
+                .send_command(connection::Command::Pong {
                     server1: "Me".to_string(),
-                    server2: Some(server1.to_string())
-                }
-            ).ok();
+                    server2: Some(server1.to_string()),
+                })
+                .ok();
         }
     }
 }
