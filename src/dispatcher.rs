@@ -19,8 +19,7 @@ pub trait Dispatch {
 }
 
 pub struct Dispatcher {
-    command_listeners:
-        HashMap<connection::CommandType, Vec<Box<dyn Fn(&connection::Command)>>>,
+    command_listeners: HashMap<connection::CommandType, Vec<Box<dyn Fn(&connection::Command)>>>,
     reply_listeners: Vec<Box<dyn Fn(&connection::ReplyType, &String) -> bool>>,
 }
 
@@ -84,9 +83,12 @@ mod tests {
         let mut dispatcher = Dispatcher::new();
 
         dispatcher.register_command_listener(connection::CommandType::Pass, Box::new(|_| {}));
-        dispatcher.register_command_listener(connection::CommandType::Pass, Box::new(|command| {
-            panic!("Test passed: {:?}", command);
-        }));
+        dispatcher.register_command_listener(
+            connection::CommandType::Pass,
+            Box::new(|command| {
+                panic!("Test passed: {:?}", command);
+            }),
+        );
         dispatcher.handle_command(connection::Command::Pass {
             password: "abc".to_string(),
         });
@@ -96,9 +98,12 @@ mod tests {
     fn command_listener_no_match() {
         let mut dispatcher = Dispatcher::new();
 
-        dispatcher.register_command_listener(connection::CommandType::Nick, Box::new(|command| {
-            panic!("Test failed: {:?}", command);
-        }));
+        dispatcher.register_command_listener(
+            connection::CommandType::Nick,
+            Box::new(|command| {
+                panic!("Test failed: {:?}", command);
+            }),
+        );
         dispatcher.handle_command(connection::Command::Pass {
             password: "abc".to_string(),
         });

@@ -21,10 +21,7 @@ fn main() -> io::Result<()> {
         dispatcher.clone(),
     )));
 
-    let client = client::Client::new(
-        connection.clone(),
-        dispatcher.clone()
-    );
+    let client = client::Client::new(connection.clone(), dispatcher.clone());
 
     let terminal = terminal::Terminal::new(io::stdin());
 
