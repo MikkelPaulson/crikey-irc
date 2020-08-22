@@ -18,3 +18,7 @@ services:
       - ./tests:/usr/src/irustc-bot/tests
       - ./Cargo.lock:/usr/src/irustc-bot/Cargo.lock
       - ./Cargo.toml:/usr/src/irustc-bot/Cargo.toml
+    command:
+      - cargo
+      - run
+      - irc-server:6667
