@@ -14,4 +14,11 @@ services:
     depends_on:
       - irc-server
     volumes:
-      - .:/usr/src/irustc-bot
+      - ./src:/usr/src/irustc-bot/src
+      - ./tests:/usr/src/irustc-bot/tests
+      - ./Cargo.lock:/usr/src/irustc-bot/Cargo.lock
+      - ./Cargo.toml:/usr/src/irustc-bot/Cargo.toml
+    command:
+      - cargo
+      - run
+      - irc-server:6667
