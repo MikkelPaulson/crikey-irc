@@ -30,4 +30,16 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Run unit tests
-        run: cargo test --verbose
+        run: cargo test --lib --verbose
+
+  integration-tests:
+    name: Integration tests
+
+    runs-on: ubuntu-latest
+
+    needs: rustfmt # no point in running unit tests if linting fails
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Run integration tests
+        run: cargo test --test integration --jobs 1
