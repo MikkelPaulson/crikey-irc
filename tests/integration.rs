@@ -1,5 +1,3 @@
-use std::time;
-
 mod common;
 
 // > NICK baz
@@ -22,22 +20,12 @@ mod common;
 fn it_authenticates() {
     let addr = "127.0.0.1:16667";
 
-    let server_rx = common::new_server(addr);
-    let mut client = common::new_client(addr).unwrap();
-    let (_, rx) = server_rx
-        .recv_timeout(time::Duration::from_secs(1))
-        .unwrap();
+    let (_client, mut server) = common::init(addr);
 
+    assert_eq!("NICK baz", server.read_line().expect("Nothing to read."));
     assert_eq!(
-        "NICK baz\r\n",
-        rx.recv_timeout(time::Duration::from_secs(1))
-            .expect("Could not read")
+        "USER pjohnson local remote :Potato Johnson",
+        server.read_line().expect("Nothing to read.")
     );
-    assert_eq!(
-        "USER pjohnson local remote :Potato Johnson\r\n",
-        rx.recv_timeout(time::Duration::from_secs(1))
-            .expect("Could not read")
-    );
-
-    client.kill().ok();
+    assert_eq!(None, server.read_line());
 }
