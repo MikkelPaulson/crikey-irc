@@ -3,7 +3,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 pub struct Client<'a> {
-    connection: Rc<RefCell<dyn 'a + connection::Connect>>,
+    connection: Rc<RefCell<connection::Connection<'a>>>,
 }
 
 impl<'a> Client<'a> {

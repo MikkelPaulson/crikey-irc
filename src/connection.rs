@@ -3,14 +3,6 @@ use std::io::prelude::*;
 use std::net;
 use std::str::FromStr;
 
-pub trait Connect {
-    fn poll(&mut self) -> bool;
-
-    fn send_command(&mut self, command: Command) -> std::io::Result<()>;
-
-    fn send_command_raw(&mut self, raw_command: String) -> std::io::Result<()>;
-}
-
 pub struct Connection<'a> {
     reader: Box<dyn 'a + io::BufRead>,
     writer: Box<dyn 'a + Write>,
@@ -27,10 +19,8 @@ impl<'a> Connection<'a> {
             writer: Box::new(stream),
         }
     }
-}
 
-impl<'a> Connect for Connection<'a> {
-    fn poll(&mut self) -> bool {
+    pub fn poll(&mut self) -> bool {
         let mut buffer = String::new();
 
         match self.reader.read_line(&mut buffer) {
@@ -47,12 +37,12 @@ impl<'a> Connect for Connection<'a> {
         }
     }
 
-    fn send_command(&mut self, command: Command) -> std::io::Result<()> {
+    pub fn send_command(&mut self, command: Command) -> std::io::Result<()> {
         let raw_command = command_to_raw(command);
         self.send_command_raw(raw_command)
     }
 
-    fn send_command_raw(&mut self, mut raw_command: String) -> std::io::Result<()> {
+    pub fn send_command_raw(&mut self, mut raw_command: String) -> std::io::Result<()> {
         raw_command.push_str("\r\n");
         print!("> {}", raw_command);
         self.writer.write(raw_command.as_bytes())?;

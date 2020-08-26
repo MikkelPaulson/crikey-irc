@@ -1,4 +1,3 @@
-use crate::connection::Connect;
 use std::cell::RefCell;
 use std::io;
 use std::net;
