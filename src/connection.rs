@@ -1,9 +1,6 @@
-use crate::dispatcher;
-use std::cell::RefCell;
 use std::io;
 use std::io::prelude::*;
 use std::net;
-use std::rc::Rc;
 use std::str::FromStr;
 
 pub trait Connect {
@@ -17,14 +14,10 @@ pub trait Connect {
 pub struct Connection<'a> {
     reader: Box<dyn 'a + io::BufRead>,
     writer: Box<dyn 'a + Write>,
-    dispatcher: Rc<RefCell<dyn 'a + dispatcher::Dispatch>>,
 }
 
 impl<'a> Connection<'a> {
-    pub fn new(
-        stream: &'a net::TcpStream,
-        dispatcher: Rc<RefCell<dispatcher::Dispatcher>>,
-    ) -> Connection<'a> {
+    pub fn new(stream: &'a net::TcpStream) -> Connection<'a> {
         stream.set_nonblocking(true).unwrap();
 
         let reader = io::BufReader::new(stream);
@@ -32,18 +25,6 @@ impl<'a> Connection<'a> {
         Connection {
             reader: Box::new(reader),
             writer: Box::new(stream),
-            dispatcher: dispatcher,
-        }
-    }
-
-    fn dispatch_message(&mut self, mut raw_message: String) {
-        split_server_name(&mut raw_message);
-        let mut dispatcher = self.dispatcher.borrow_mut();
-
-        if let Some(command) = raw_to_command(&raw_message) {
-            dispatcher.handle_command(command);
-        } else if let Some((reply_type, reply_message)) = raw_to_reply(&raw_message) {
-            dispatcher.handle_reply(reply_type, reply_message);
         }
     }
 }
@@ -58,7 +39,6 @@ impl<'a> Connect for Connection<'a> {
                     panic!("Stream disconnected");
                 } else {
                     print!("< {}", buffer);
-                    self.dispatch_message(buffer);
                     true
                 }
             }

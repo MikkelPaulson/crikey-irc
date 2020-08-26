@@ -8,20 +8,14 @@ use std::time::Duration;
 
 mod client;
 mod connection;
-mod dispatcher;
 mod terminal;
 
 pub fn run<A: net::ToSocketAddrs>(addr: A) -> io::Result<()> {
     let stream = net::TcpStream::connect(addr).expect("Could not connect to server.");
 
-    let dispatcher = Rc::new(RefCell::new(dispatcher::Dispatcher::new()));
+    let connection = Rc::new(RefCell::new(connection::Connection::new(&stream)));
 
-    let connection = Rc::new(RefCell::new(connection::Connection::new(
-        &stream,
-        dispatcher.clone(),
-    )));
-
-    let client = client::Client::new(connection.clone(), dispatcher.clone());
+    let client = client::Client::new(connection.clone());
 
     let terminal = terminal::Terminal::new(io::stdin());
 

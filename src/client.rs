@@ -1,22 +1,14 @@
 use crate::connection;
-use crate::dispatcher;
 use std::cell::RefCell;
 use std::rc::Rc;
 
 pub struct Client<'a> {
     connection: Rc<RefCell<dyn 'a + connection::Connect>>,
-    dispatcher: Rc<RefCell<dyn 'a + dispatcher::Dispatch>>,
 }
 
 impl<'a> Client<'a> {
-    pub fn new(
-        connection: Rc<RefCell<connection::Connection<'a>>>,
-        dispatcher: Rc<RefCell<dyn 'a + dispatcher::Dispatch>>,
-    ) -> Client<'a> {
-        Client {
-            connection,
-            dispatcher,
-        }
+    pub fn new(connection: Rc<RefCell<connection::Connection<'a>>>) -> Client<'a> {
+        Client { connection }
     }
 
     fn pong(&self, command: &connection::Command) {
