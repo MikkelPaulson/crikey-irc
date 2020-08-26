@@ -20,7 +20,7 @@ impl<'a> Connection {
         }
     }
 
-    pub fn poll(&mut self) -> bool {
+    pub fn poll(&mut self) -> Option<Message> {
         let mut buffer = String::new();
 
         match self.reader.read_line(&mut buffer) {
@@ -29,10 +29,16 @@ impl<'a> Connection {
                     panic!("Stream disconnected");
                 } else {
                     print!("< {}", buffer);
-                    true
+                    if let Some(command) = raw_to_command(&buffer) {
+                        Some(Message::Command(command))
+                    } else if let Some((reply_type, reply_body)) = raw_to_reply(&buffer) {
+                        Some(Message::Reply(reply_type, reply_body))
+                    } else {
+                        None
+                    }
                 }
             }
-            Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => false,
+            Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => None,
             Err(e) => panic!("IO error: {}", e),
         }
     }
@@ -48,6 +54,11 @@ impl<'a> Connection {
         self.writer.write(raw_command.as_bytes())?;
         Ok(())
     }
+}
+
+pub enum Message {
+    Command(Command),
+    Reply(ReplyType, String),
 }
 
 fn split_server_name(raw_message: &mut String) -> Option<String> {
