@@ -13,7 +13,7 @@ mod terminal;
 pub fn run<A: net::ToSocketAddrs>(addr: A) -> io::Result<()> {
     let stream = net::TcpStream::connect(addr).expect("Could not connect to server.");
 
-    let connection = Rc::new(RefCell::new(connection::Connection::new(&stream)));
+    let connection = Rc::new(RefCell::new(connection::Connection::new(stream)));
 
     let client = client::Client::new(connection.clone());
 

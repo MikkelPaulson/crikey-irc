@@ -17,10 +17,10 @@ pub struct Connection<'a> {
 }
 
 impl<'a> Connection<'a> {
-    pub fn new(stream: &'a net::TcpStream) -> Connection<'a> {
+    pub fn new(stream: net::TcpStream) -> Connection<'a> {
         stream.set_nonblocking(true).unwrap();
 
-        let reader = io::BufReader::new(stream);
+        let reader = io::BufReader::new(stream.try_clone().unwrap());
 
         Connection {
             reader: Box::new(reader),
