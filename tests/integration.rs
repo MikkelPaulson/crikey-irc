@@ -24,7 +24,7 @@ fn it_authenticates() {
 
     assert_eq!("NICK baz", server.read_line().expect("Nothing to read."));
     assert_eq!(
-        "USER pjohnson local remote :Potato Johnson",
+        "USER pjohnson 0 * :Potato Johnson",
         server.read_line().expect("Nothing to read.")
     );
     assert_eq!(None, server.read_line());

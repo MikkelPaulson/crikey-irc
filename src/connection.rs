@@ -1,55 +1,26 @@
-use crate::dispatcher;
-use std::cell::RefCell;
 use std::io;
 use std::io::prelude::*;
 use std::net;
-use std::rc::Rc;
 use std::str::FromStr;
 
-pub trait Connect {
-    fn poll(&mut self) -> bool;
-
-    fn send_command(&mut self, command: Command) -> std::io::Result<()>;
-
-    fn send_command_raw(&mut self, raw_command: String) -> std::io::Result<()>;
+pub struct Connection {
+    reader: io::BufReader<net::TcpStream>,
+    writer: net::TcpStream,
 }
 
-pub struct Connection<'a> {
-    reader: Box<dyn 'a + io::BufRead>,
-    writer: Box<dyn 'a + Write>,
-    dispatcher: Rc<RefCell<dyn 'a + dispatcher::Dispatch>>,
-}
-
-impl<'a> Connection<'a> {
-    pub fn new(
-        stream: &'a net::TcpStream,
-        dispatcher: Rc<RefCell<dispatcher::Dispatcher>>,
-    ) -> Connection<'a> {
+impl<'a> Connection {
+    pub fn new(stream: net::TcpStream) -> Connection {
         stream.set_nonblocking(true).unwrap();
 
-        let reader = io::BufReader::new(stream);
+        let reader = io::BufReader::new(stream.try_clone().unwrap());
 
         Connection {
-            reader: Box::new(reader),
-            writer: Box::new(stream),
-            dispatcher: dispatcher,
+            reader,
+            writer: stream,
         }
     }
 
-    fn dispatch_message(&mut self, mut raw_message: String) {
-        split_server_name(&mut raw_message);
-        let mut dispatcher = self.dispatcher.borrow_mut();
-
-        if let Some(command) = raw_to_command(&raw_message) {
-            dispatcher.handle_command(command);
-        } else if let Some((reply_type, reply_message)) = raw_to_reply(&raw_message) {
-            dispatcher.handle_reply(reply_type, reply_message);
-        }
-    }
-}
-
-impl<'a> Connect for Connection<'a> {
-    fn poll(&mut self) -> bool {
+    pub fn poll(&mut self) -> Option<Message> {
         let mut buffer = String::new();
 
         match self.reader.read_line(&mut buffer) {
@@ -57,27 +28,40 @@ impl<'a> Connect for Connection<'a> {
                 if len == 0 {
                     panic!("Stream disconnected");
                 } else {
-                    print!("< {}", buffer);
-                    self.dispatch_message(buffer);
-                    true
+                    split_server_name(&mut buffer);
+                    if let Some(command) = raw_to_command(&buffer) {
+                        println!("\x1B[94m<C {:?}\x1B[0m", command);
+                        Some(Message::Command(command))
+                    } else if let Some((reply_type, reply_body)) = raw_to_reply(&buffer) {
+                        println!("\x1B[92m<R {:?} {:?}\x1B[0m", reply_type, reply_body);
+                        Some(Message::Reply(reply_type, reply_body))
+                    } else {
+                        print!("\x1B[91m<? {}\x1B[0m", buffer);
+                        None
+                    }
                 }
             }
-            Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => false,
+            Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => None,
             Err(e) => panic!("IO error: {}", e),
         }
     }
 
-    fn send_command(&mut self, command: Command) -> std::io::Result<()> {
+    pub fn send_command(&mut self, command: Command) -> std::io::Result<()> {
         let raw_command = command_to_raw(command);
         self.send_command_raw(raw_command)
     }
 
-    fn send_command_raw(&mut self, mut raw_command: String) -> std::io::Result<()> {
+    pub fn send_command_raw(&mut self, mut raw_command: String) -> std::io::Result<()> {
         raw_command.push_str("\r\n");
-        print!("> {}", raw_command);
+        print!(">> {}", raw_command);
         self.writer.write(raw_command.as_bytes())?;
         Ok(())
     }
+}
+
+pub enum Message {
+    Command(Command),
+    Reply(ReplyType, String),
 }
 
 fn split_server_name(raw_message: &mut String) -> Option<String> {
@@ -121,8 +105,8 @@ fn raw_to_command(raw_command: &str) -> Option<Command> {
             if command_parts.len() >= 5 {
                 Some(Command::User {
                     username: command_parts[1].to_string(),
-                    hostname: command_parts[2].to_string(),
-                    servername: command_parts[3].to_string(),
+                    mode: u8::from_str(command_parts[2]).unwrap_or(0),
+                    // part 3 is unused
                     realname: command_parts[4..].join(" ").strip_prefix(":")?.to_string(),
                 })
             } else {
@@ -168,13 +152,9 @@ fn command_to_raw(command: Command) -> String {
         },
         Command::User {
             username,
-            hostname,
-            servername,
+            mode,
             realname,
-        } => format!(
-            "USER {} {} {} :{}",
-            username, hostname, servername, realname
-        ),
+        } => format!("USER {} {} * :{}", username, mode, realname),
         Command::Ping { server1, server2 } => match server2 {
             Some(server2) => format!("PING {} {}", server1, server2),
             None => format!("PING {}", server1),
@@ -349,8 +329,7 @@ pub enum Command {
     },
     User {
         username: String,
-        hostname: String,
-        servername: String,
+        mode: u8,
         realname: String,
     },
     //Oper { user: String, password: String },
@@ -373,40 +352,6 @@ pub enum Command {
         server1: String,
         server2: Option<String>,
     },
-}
-
-impl Command {
-    pub fn to_command_type(&self) -> CommandType {
-        match self {
-            Command::Pass { .. } => CommandType::Pass,
-            Command::Nick { .. } => CommandType::Nick,
-            Command::User { .. } => CommandType::User,
-            Command::Ping { .. } => CommandType::Ping,
-            Command::Pong { .. } => CommandType::Pong,
-        }
-    }
-}
-
-#[derive(Hash, Eq, PartialEq, Debug)]
-pub enum CommandType {
-    // Connection registration
-    Pass,
-    Nick,
-    User,
-    //Oper,
-    //Quit,
-
-    // Channel operations
-    //Join,
-    //Part,
-
-    // Sending messages
-    //Privmsg,
-    //Notice,
-
-    // Miscellaneous messages
-    Ping,
-    Pong,
 }
 
 #[derive(Hash, Eq, PartialEq, Debug)]
@@ -555,67 +500,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn to_command_type_pass() {
-        assert_eq!(
-            CommandType::Pass,
-            Command::Pass {
-                password: "mypass".to_string()
-            }
-            .to_command_type(),
-        );
-    }
-
-    #[test]
-    fn to_command_type_nick() {
-        assert_eq!(
-            CommandType::Nick,
-            Command::Nick {
-                nickname: "me".to_string(),
-                hopcount: None
-            }
-            .to_command_type(),
-        );
-    }
-
-    #[test]
-    fn to_command_type_user() {
-        assert_eq!(
-            CommandType::User,
-            Command::User {
-                username: "pjohnson".to_string(),
-                hostname: "local".to_string(),
-                servername: "remote".to_string(),
-                realname: "Potato Johnson".to_string(),
-            }
-            .to_command_type(),
-        );
-    }
-
-    #[test]
-    fn to_command_type_ping() {
-        assert_eq!(
-            CommandType::Ping,
-            Command::Ping {
-                server1: "myserver".to_string(),
-                server2: None
-            }
-            .to_command_type(),
-        );
-    }
-
-    #[test]
-    fn to_command_type_pong() {
-        assert_eq!(
-            CommandType::Pong,
-            Command::Pong {
-                server1: "myclient".to_string(),
-                server2: None
-            }
-            .to_command_type(),
-        );
-    }
-
-    #[test]
     fn command_to_raw_pass() {
         assert_eq!(
             "PASS mysecretpass",
@@ -646,12 +530,11 @@ mod tests {
     #[test]
     fn command_to_raw_user() {
         assert_eq!(
-            "USER ab cd ef :gh ij",
+            "USER pjohnson 0 * :Potato Johnson",
             command_to_raw(Command::User {
-                username: "ab".to_string(),
-                hostname: "cd".to_string(),
-                servername: "ef".to_string(),
-                realname: "gh ij".to_string(),
+                username: "pjohnson".to_string(),
+                mode: 0,
+                realname: "Potato Johnson".to_string(),
             }),
         );
     }
@@ -731,21 +614,18 @@ mod tests {
 
     #[test]
     fn raw_to_command_user() {
-        assert!(raw_to_command("USER pjohnson local remote").is_none());
-        assert!(raw_to_command("USER pjohnson local remote realname").is_none());
-        assert!(raw_to_command("USER pjohnson local :remote realname").is_none());
+        assert!(raw_to_command("USER pjohnson 0 *").is_none());
+        assert!(raw_to_command("USER pjohnson 0 * realname").is_none());
 
-        let command = raw_to_command("USER pjohnson local remote :Potato Johnson");
+        let command = raw_to_command("USER pjohnson 0 * :Potato Johnson");
         if let Some(Command::User {
             username,
-            hostname,
-            servername,
+            mode,
             realname,
         }) = command
         {
             assert_eq!("pjohnson", username);
-            assert_eq!("local", hostname);
-            assert_eq!("remote", servername);
+            assert_eq!(0, mode);
             assert_eq!("Potato Johnson", realname);
         } else {
             panic!("Wrong type: {:?}", command);
