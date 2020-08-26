@@ -28,12 +28,15 @@ impl<'a> Connection {
                 if len == 0 {
                     panic!("Stream disconnected");
                 } else {
-                    print!("< {}", buffer);
+                    split_server_name(&mut buffer);
                     if let Some(command) = raw_to_command(&buffer) {
+                        println!("\x1B[94m<C {:?}\x1B[0m", command);
                         Some(Message::Command(command))
                     } else if let Some((reply_type, reply_body)) = raw_to_reply(&buffer) {
+                        println!("\x1B[92m<R {:?} {:?}\x1B[0m", reply_type, reply_body);
                         Some(Message::Reply(reply_type, reply_body))
                     } else {
+                        print!("\x1B[91m<? {}\x1B[0m", buffer);
                         None
                     }
                 }
@@ -50,7 +53,7 @@ impl<'a> Connection {
 
     pub fn send_command_raw(&mut self, mut raw_command: String) -> std::io::Result<()> {
         raw_command.push_str("\r\n");
-        print!("> {}", raw_command);
+        print!(">> {}", raw_command);
         self.writer.write(raw_command.as_bytes())?;
         Ok(())
     }
