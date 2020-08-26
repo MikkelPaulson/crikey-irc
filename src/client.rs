@@ -47,8 +47,7 @@ impl Client {
 pub struct AuthToken {
     pub nickname: String,
     pub username: String,
-    pub hostname: String,
-    pub servername: String,
+    pub mode: u8,
     pub realname: String,
     pub password: Option<String>,
 }
@@ -73,8 +72,7 @@ impl AuthToken {
     fn user(&self) -> Command {
         Command::User {
             username: self.username.to_owned(),
-            hostname: self.hostname.to_owned(),
-            servername: self.servername.to_owned(),
+            mode: self.mode,
             realname: self.realname.to_owned(),
         }
     }
