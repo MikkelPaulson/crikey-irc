@@ -2,12 +2,12 @@ use crate::connection;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-pub struct Client<'a> {
-    connection: Rc<RefCell<connection::Connection<'a>>>,
+pub struct Client {
+    connection: Rc<RefCell<connection::Connection>>,
 }
 
-impl<'a> Client<'a> {
-    pub fn new(connection: Rc<RefCell<connection::Connection<'a>>>) -> Client<'a> {
+impl Client {
+    pub fn new(connection: Rc<RefCell<connection::Connection>>) -> Client {
         Client { connection }
     }
 

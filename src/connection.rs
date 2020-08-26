@@ -3,20 +3,20 @@ use std::io::prelude::*;
 use std::net;
 use std::str::FromStr;
 
-pub struct Connection<'a> {
-    reader: Box<dyn 'a + io::BufRead>,
-    writer: Box<dyn 'a + Write>,
+pub struct Connection {
+    reader: io::BufReader<net::TcpStream>,
+    writer: net::TcpStream,
 }
 
-impl<'a> Connection<'a> {
-    pub fn new(stream: net::TcpStream) -> Connection<'a> {
+impl<'a> Connection {
+    pub fn new(stream: net::TcpStream) -> Connection {
         stream.set_nonblocking(true).unwrap();
 
         let reader = io::BufReader::new(stream.try_clone().unwrap());
 
         Connection {
-            reader: Box::new(reader),
-            writer: Box::new(stream),
+            reader,
+            writer: stream,
         }
     }
 
