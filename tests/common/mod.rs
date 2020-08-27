@@ -14,6 +14,30 @@ pub fn init<A: net::ToSocketAddrs>(addr: A) -> (Client, Server) {
     (client, server)
 }
 
+pub fn connect<A: net::ToSocketAddrs>(addr: A) -> (Client, Server) {
+    let (client, mut server) = init(addr);
+
+    // Flush client auth and respond with boilerplate welcome text
+    server.truncate();
+    server.write_line(":irc.example.net 001 spudly :Welcome to the Internet Relay Network baz!~pjohnson@ircbot_irustc-bot_run_33951ac1d023.ircbot_default");
+    server.write_line(":irc.example.net 002 spudly :Your host is irc.example.net, running version ngircd-23 (x86_64/alpine/linux-musl)");
+    server.write_line(":irc.example.net 003 spudly :This server has been started Fri Aug 21 2020 at 03:21:11 (UTC)");
+    server.write_line(":irc.example.net 004 spudly irc.example.net ngircd-23 abBcCFiIoqrRswx abehiIklmMnoOPqQrRstvVz");
+    server.write_line(":irc.example.net 005 spudly RFC2812 IRCD=ngIRCd CHARSET=UTF-8 CASEMAPPING=ascii PREFIX=(qaohv)~&@%+ CHANTYPES=#&+ CHANMODES=beI,k,l,imMnOPQRstVz CHANLIMIT=#&+:10 :are supported on this server");
+    server.write_line(":irc.example.net 005 spudly CHANNELLEN=50 NICKLEN=9 TOPICLEN=490 AWAYLEN=127 KICKLEN=400 MODES=5 MAXLIST=beI:50 EXCEPTS=e INVEX=I PENALTY :are supported on this server");
+    server.write_line(":irc.example.net 251 spudly :There are 1 users and 0 services on 1 servers");
+    server.write_line(":irc.example.net 254 spudly 1 :channels formed");
+    server.write_line(":irc.example.net 255 spudly :I have 1 users, 0 services and 0 servers");
+    server.write_line(":irc.example.net 265 spudly 1 1 :Current local users: 1, Max: 1");
+    server.write_line(":irc.example.net 266 spudly 1 1 :Current global users: 1, Max: 1");
+    server.write_line(
+        ":irc.example.net 250 spudly :Highest connection count: 1 (4 connections received)",
+    );
+    server.write_line(":irc.example.net 422 spudly :MOTD file is missing");
+
+    (client, server)
+}
+
 pub struct Client {
     child: process::Child,
 }
@@ -101,7 +125,7 @@ impl Server {
             .expect("Connection already established.");
 
         let (sender, receiver) = listener
-            .recv_timeout(time::Duration::from_millis(10))
+            .recv_timeout(time::Duration::from_millis(1000))
             .expect("Timed out waiting for connection.");
 
         self.listener = None;
@@ -114,7 +138,7 @@ impl Server {
             .receiver
             .as_ref()
             .expect("Connection not yet established.")
-            .recv_timeout(time::Duration::from_millis(100))
+            .recv_timeout(time::Duration::from_millis(1000))
         {
             Ok(line) => Some(line),
             Err(_) => None,
@@ -122,7 +146,7 @@ impl Server {
     }
 
     pub fn truncate(&mut self) {
-        while let Some(_) = self.read_line() { }
+        while let Some(_) = self.read_line() {}
     }
 
     pub fn write_line(&self, message: &str) {
