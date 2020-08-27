@@ -42,4 +42,4 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Run integration tests
-        run: cargo test --test integration --jobs 1
+        run: cargo test --test integration --jobs 1 -- --test-threads=1

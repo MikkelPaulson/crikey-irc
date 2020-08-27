@@ -114,11 +114,15 @@ impl Server {
             .receiver
             .as_ref()
             .expect("Connection not yet established.")
-            .recv_timeout(time::Duration::from_millis(10))
+            .recv_timeout(time::Duration::from_millis(100))
         {
             Ok(line) => Some(line),
             Err(_) => None,
         }
+    }
+
+    pub fn truncate(&mut self) {
+        while let Some(_) = self.read_line() { }
     }
 
     pub fn write_line(&self, message: &str) {
