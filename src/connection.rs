@@ -28,7 +28,10 @@ impl<'a> Connection {
                 if len == 0 {
                     panic!("Stream disconnected");
                 } else {
+                    // Truncate at the first control character (ie. CR/LF)
+                    buffer.truncate(buffer.find(char::is_control).unwrap_or(buffer.len()));
                     split_server_name(&mut buffer);
+
                     if let Some(command) = raw_to_command(&buffer) {
                         println!("\x1B[94m<C {:?}\x1B[0m", command);
                         Some(Message::Command(command))
@@ -36,7 +39,7 @@ impl<'a> Connection {
                         println!("\x1B[92m<R {:?} {:?}\x1B[0m", reply_type, reply_body);
                         Some(Message::Reply(reply_type, reply_body))
                     } else {
-                        print!("\x1B[91m<? {}\x1B[0m", buffer);
+                        println!("\x1B[91m<? {}\x1B[0m", buffer);
                         None
                     }
                 }
@@ -113,32 +116,41 @@ fn raw_to_command(raw_command: &str) -> Option<Command> {
                 None
             }
         }
-        "PING" => {
-            if command_parts.len() >= 2 && command_parts.len() <= 3 {
-                Some(Command::Ping {
-                    server1: command_parts[1].to_string(),
-                    server2: match command_parts.get(2) {
-                        Some(&server2) => Some(server2.to_string()),
-                        None => None,
-                    },
-                })
-            } else {
-                None
+        "PING" => match command_parts.len() {
+            1 => Some(Command::Ping {
+                to: None,
+                from: None,
+            }),
+            2 => {
+                if Some(':') == command_parts[1].chars().nth(0) {
+                    Some(Command::Ping {
+                        to: None,
+                        from: Some(command_parts[1].get(1..).unwrap_or("").to_string()),
+                    })
+                } else {
+                    Some(Command::Ping {
+                        to: Some(command_parts[1].to_string()),
+                        from: None,
+                    })
+                }
             }
-        }
-        "PONG" => {
-            if command_parts.len() >= 2 && command_parts.len() <= 3 {
-                Some(Command::Pong {
-                    server1: command_parts[1].to_string(),
-                    server2: match command_parts.get(2) {
-                        Some(&server2) => Some(server2.to_string()),
-                        None => None,
-                    },
-                })
-            } else {
-                None
-            }
-        }
+            3 => Some(Command::Ping {
+                to: Some(command_parts[2].to_string()),
+                from: Some(command_parts[1].to_string()),
+            }),
+            _ => None,
+        },
+        "PONG" => match command_parts.len() {
+            2 => Some(Command::Pong {
+                to: None,
+                from: command_parts[1].to_string(),
+            }),
+            3 => Some(Command::Pong {
+                to: Some(command_parts[2].to_string()),
+                from: command_parts[1].to_string(),
+            }),
+            _ => None,
+        },
         _ => None,
     }
 }
@@ -155,13 +167,15 @@ fn command_to_raw(command: Command) -> String {
             mode,
             realname,
         } => format!("USER {} {} * :{}", username, mode, realname),
-        Command::Ping { server1, server2 } => match server2 {
-            Some(server2) => format!("PING {} {}", server1, server2),
-            None => format!("PING {}", server1),
+        Command::Ping { to, from } => match (to, from) {
+            (Some(to), Some(from)) => format!("PING {} {}", from, to),
+            (Some(to), None) => format!("PING {}", to),
+            (None, Some(from)) => format!("PING :{}", from),
+            (None, None) => "PING".to_string(),
         },
-        Command::Pong { server1, server2 } => match server2 {
-            Some(server2) => format!("PONG {} {}", server1, server2),
-            None => format!("PONG {}", server1),
+        Command::Pong { to, from } => match to {
+            Some(to) => format!("PONG {} {}", from, to),
+            None => format!("PONG {}", from),
         },
     }
 }
@@ -345,12 +359,12 @@ pub enum Command {
 
     // Miscellaneous messages
     Ping {
-        server1: String,
-        server2: Option<String>,
+        from: Option<String>,
+        to: Option<String>,
     },
     Pong {
-        server1: String,
-        server2: Option<String>,
+        from: String,
+        to: Option<String>,
     },
 }
 
@@ -542,17 +556,31 @@ mod tests {
     #[test]
     fn command_to_raw_ping() {
         assert_eq!(
-            "PING myserver",
+            "PING",
             command_to_raw(Command::Ping {
-                server1: "myserver".to_string(),
-                server2: None,
+                to: None,
+                from: None
             }),
         );
         assert_eq!(
-            "PING myserver myotherserver",
+            "PING :me",
             command_to_raw(Command::Ping {
-                server1: "myserver".to_string(),
-                server2: Some("myotherserver".to_string()),
+                to: None,
+                from: Some("me".to_string()),
+            }),
+        );
+        assert_eq!(
+            "PING myserver",
+            command_to_raw(Command::Ping {
+                to: Some("myserver".to_string()),
+                from: None
+            }),
+        );
+        assert_eq!(
+            "PING me myserver",
+            command_to_raw(Command::Ping {
+                to: Some("myserver".to_string()),
+                from: Some("me".to_string()),
             }),
         );
     }
@@ -560,17 +588,17 @@ mod tests {
     #[test]
     fn command_to_raw_pong() {
         assert_eq!(
-            "PONG myclient",
+            "PONG me",
             command_to_raw(Command::Pong {
-                server1: "myclient".to_string(),
-                server2: None,
+                from: "me".to_string(),
+                to: None,
             }),
         );
         assert_eq!(
-            "PONG myclient myotherclient",
+            "PONG me myserver",
             command_to_raw(Command::Pong {
-                server1: "myclient".to_string(),
-                server2: Some("myotherclient".to_string()),
+                from: "me".to_string(),
+                to: Some("myserver".to_string()),
             }),
         );
     }
@@ -634,40 +662,55 @@ mod tests {
 
     #[test]
     fn raw_to_command_ping() {
+        let command = raw_to_command("PING");
+        if let Some(Command::Ping { to, from }) = command {
+            assert!(to.is_none());
+            assert!(from.is_none());
+        } else {
+            panic!("Wrong type: {:?}", command);
+        }
+
         let command = raw_to_command("PING myserver");
-        if let Some(Command::Ping { server1, server2 }) = command {
-            assert_eq!("myserver", server1);
-            assert!(server2.is_none());
+        if let Some(Command::Ping { to, from }) = command {
+            assert_eq!(Some("myserver".to_string()), to);
+            assert!(from.is_none());
         } else {
             panic!("Wrong type: {:?}", command);
         }
 
-        let command = raw_to_command("PING myserver myotherserver");
-        if let Some(Command::Ping { server1, server2 }) = command {
-            assert_eq!("myserver", server1);
-            assert_eq!(Some("myotherserver".to_string()), server2);
+        let command = raw_to_command("PING me myserver");
+        if let Some(Command::Ping { to, from }) = command {
+            assert_eq!(Some("myserver".to_string()), to);
+            assert_eq!(Some("me".to_string()), from);
         } else {
             panic!("Wrong type: {:?}", command);
         }
 
-        assert!(raw_to_command("PING").is_none());
+        let command = raw_to_command("PING :me");
+        if let Some(Command::Ping { to, from }) = command {
+            assert!(to.is_none());
+            assert_eq!(Some("me".to_string()), from);
+        } else {
+            panic!("Wrong type: {:?}", command);
+        }
+
         assert!(raw_to_command("PING a b c").is_none());
     }
 
     #[test]
     fn raw_to_command_pong() {
-        let command = raw_to_command("PONG myclient");
-        if let Some(Command::Pong { server1, server2 }) = command {
-            assert_eq!("myclient", server1);
-            assert!(server2.is_none());
+        let command = raw_to_command("PONG me");
+        if let Some(Command::Pong { to, from }) = command {
+            assert_eq!("me".to_string(), from);
+            assert!(to.is_none());
         } else {
             panic!("Wrong type: {:?}", command);
         }
 
-        let command = raw_to_command("PONG myclient myotherclient");
-        if let Some(Command::Pong { server1, server2 }) = command {
-            assert_eq!("myclient", server1);
-            assert_eq!(Some("myotherclient".to_string()), server2);
+        let command = raw_to_command("PONG me myserver");
+        if let Some(Command::Pong { to, from }) = command {
+            assert_eq!("me".to_string(), from);
+            assert_eq!(Some("myserver".to_string()), to);
         } else {
             panic!("Wrong type: {:?}", command);
         }
