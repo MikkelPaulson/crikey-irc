@@ -6,6 +6,7 @@ use std::net;
 
 mod command;
 mod reply;
+mod types;
 
 pub struct Connection {
     reader: Box<dyn io::BufRead>,
