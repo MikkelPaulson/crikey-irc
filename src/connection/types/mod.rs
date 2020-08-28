@@ -1,3 +1,4 @@
+pub use self::channel::{Channel, ChannelID, ChannelName, ChannelType};
 pub use self::host::{Host, Hostname, IpAddr, Ipv4Addr, Ipv6Addr, Servername};
 pub use self::key::Key;
 pub use self::nickname::Nickname;
@@ -6,6 +7,7 @@ pub use self::user::User;
 
 pub use self::errors::ParseError;
 
+mod channel;
 mod errors;
 mod host;
 mod key;
