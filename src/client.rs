@@ -1,4 +1,4 @@
-use crate::connection::{self, Command, Connection, ReplyType};
+use crate::connection::{Command, Connection, Message, MessageBody, ReplyType};
 use std::io;
 use std::net;
 
@@ -37,10 +37,14 @@ impl Client {
 
     pub fn poll(&mut self) -> bool {
         match self.connection.poll() {
-            Some(connection::Message::Command(command)) => self.handle_command(command),
-            Some(connection::Message::Reply(reply_type, reply_body)) => {
-                self.handle_reply(reply_type, reply_body)
-            }
+            Some(Message {
+                body: MessageBody::Command(command),
+                ..
+            }) => self.handle_command(command),
+            Some(Message {
+                body: MessageBody::Reply(reply_type, reply_body),
+                ..
+            }) => self.handle_reply(reply_type, reply_body),
             None => return false,
         }
         true

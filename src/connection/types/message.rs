@@ -4,8 +4,8 @@ use std::str::FromStr;
 
 #[derive(PartialEq, Debug)]
 pub struct Message {
-    sender: Option<Sender>,
-    body: MessageBody,
+    pub sender: Option<Sender>,
+    pub body: MessageBody,
 }
 
 impl FromStr for Message {
