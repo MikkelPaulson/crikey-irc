@@ -1,11 +1,10 @@
 pub use self::command::Command;
-pub use self::reply::ReplyType;
+pub use self::types::{Reply, ReplyType};
 use std::io;
 use std::io::prelude::*;
 use std::net;
 
 mod command;
-mod reply;
 mod types;
 
 pub struct Connection {
@@ -39,9 +38,9 @@ impl Connection {
                     if let Some(command) = command::from_raw(&buffer) {
                         println!("\x1B[94m<C {:?}\x1B[0m", command);
                         Some(Message::Command(command))
-                    } else if let Some((reply_type, reply_body)) = reply::from_raw(&buffer) {
-                        println!("\x1B[92m<R {:?} {:?}\x1B[0m", reply_type, reply_body);
-                        Some(Message::Reply(reply_type, reply_body))
+                    } else if let Ok(reply) = buffer.parse::<Reply>() {
+                        println!("\x1B[92m<R {:?}\x1B[0m", reply);
+                        Some(Message::Reply(reply.reply_type, reply.reply_message))
                     } else {
                         println!("\x1B[91m<? {}\x1B[0m", buffer);
                         None

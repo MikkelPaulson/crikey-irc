@@ -3,6 +3,7 @@ pub use self::host::{Host, Hostname, IpAddr, Ipv4Addr, Ipv6Addr, Servername};
 pub use self::key::Key;
 pub use self::msg_target::{MsgTarget, MsgTo};
 pub use self::nickname::Nickname;
+pub use self::reply::{Reply, ReplyType};
 pub use self::target_mask::{HostMask, ServerMask, TargetMask};
 pub use self::user::User;
 
@@ -14,5 +15,6 @@ mod host;
 mod key;
 mod msg_target;
 mod nickname;
+mod reply;
 mod target_mask;
 mod user;
