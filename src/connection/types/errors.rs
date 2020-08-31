@@ -1,7 +1,7 @@
 use std::error::Error;
 use std::fmt;
 
-#[derive(Debug)]
+#[derive(PartialEq, Debug)]
 pub struct ParseError(&'static str);
 
 impl ParseError {

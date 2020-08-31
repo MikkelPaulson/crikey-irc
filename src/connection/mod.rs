@@ -1,10 +1,8 @@
-pub use self::command::Command;
-pub use self::types::{Reply, ReplyType};
+pub use self::types::{Command, Reply, ReplyType};
 use std::io;
 use std::io::prelude::*;
 use std::net;
 
-mod command;
 mod types;
 
 pub struct Connection {
@@ -35,7 +33,7 @@ impl Connection {
                     buffer.truncate(buffer.find(char::is_control).unwrap_or(buffer.len()));
                     split_server_name(&mut buffer);
 
-                    if let Some(command) = command::from_raw(&buffer) {
+                    if let Ok(command) = buffer.parse() {
                         println!("\x1B[94m<C {:?}\x1B[0m", command);
                         Some(Message::Command(command))
                     } else if let Ok(reply) = buffer.parse::<Reply>() {
@@ -53,7 +51,7 @@ impl Connection {
     }
 
     pub fn send_command(&mut self, command: Command) -> std::io::Result<()> {
-        let raw_command = command::to_raw(command);
+        let raw_command = String::from(command);
         self.send_command_raw(raw_command)
     }
 

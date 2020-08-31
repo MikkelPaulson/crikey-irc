@@ -1,6 +1,8 @@
+use super::ParseError;
+use std::result::Result;
 use std::str::FromStr;
 
-#[derive(Debug)]
+#[derive(PartialEq, Debug)]
 pub enum Command {
     // Connection registration
     Pass {
@@ -37,105 +39,119 @@ pub enum Command {
     },
 }
 
-pub fn from_raw(raw_command: &str) -> Option<Command> {
-    let command_parts: Vec<&str> = raw_command.split(' ').collect();
+impl FromStr for Command {
+    type Err = ParseError;
 
-    match command_parts.first()?.as_ref() {
-        "PASS" => {
-            if command_parts.len() == 2 {
-                Some(Command::Pass {
-                    password: command_parts[1].to_string(),
-                })
-            } else {
-                None
-            }
-        }
-        "NICK" => {
-            if command_parts.len() >= 2 && command_parts.len() <= 3 {
-                Some(Command::Nick {
-                    nickname: command_parts[1].to_string(),
-                    hopcount: match command_parts.get(2) {
-                        Some(n) => u8::from_str(n).ok(),
-                        None => None,
-                    },
-                })
-            } else {
-                None
-            }
-        }
-        "USER" => {
-            if command_parts.len() >= 5 {
-                Some(Command::User {
-                    username: command_parts[1].to_string(),
-                    mode: u8::from_str(command_parts[2]).unwrap_or(0),
-                    // part 3 is unused
-                    realname: command_parts[4..].join(" ").strip_prefix(":")?.to_string(),
-                })
-            } else {
-                None
-            }
-        }
-        "PING" => match command_parts.len() {
-            1 => Some(Command::Ping {
-                to: None,
-                from: None,
-            }),
-            2 => {
-                if command_parts[1].starts_with(':') {
-                    Some(Command::Ping {
-                        to: None,
-                        from: command_parts[1].get(1..).map(|s| s.to_string()),
+    fn from_str(raw: &str) -> Result<Self, Self::Err> {
+        let command_parts: Vec<&str> = raw.split(' ').collect();
+
+        match command_parts
+            .first()
+            .ok_or_else(|| ParseError::new("Command"))?
+            .as_ref()
+        {
+            "PASS" => {
+                if command_parts.len() == 2 {
+                    Ok(Command::Pass {
+                        password: command_parts[1].to_string(),
                     })
                 } else {
-                    Some(Command::Ping {
-                        to: Some(command_parts[1].to_string()),
-                        from: None,
-                    })
+                    Err(ParseError::new("Command"))
                 }
             }
-            3 => Some(Command::Ping {
-                to: Some(command_parts[2].to_string()),
-                from: Some(command_parts[1].to_string()),
-            }),
-            _ => None,
-        },
-        "PONG" => match command_parts.len() {
-            2 => Some(Command::Pong {
-                to: None,
-                from: command_parts[1].to_string(),
-            }),
-            3 => Some(Command::Pong {
-                to: Some(command_parts[2].to_string()),
-                from: command_parts[1].to_string(),
-            }),
-            _ => None,
-        },
-        _ => None,
+            "NICK" => {
+                if command_parts.len() >= 2 && command_parts.len() <= 3 {
+                    Ok(Command::Nick {
+                        nickname: command_parts[1].to_string(),
+                        hopcount: match command_parts.get(2) {
+                            Some(n) => u8::from_str(n).ok(),
+                            None => None,
+                        },
+                    })
+                } else {
+                    Err(ParseError::new("Command"))
+                }
+            }
+            "USER" => {
+                if command_parts.len() >= 5 {
+                    Ok(Command::User {
+                        username: command_parts[1].to_string(),
+                        mode: u8::from_str(command_parts[2]).unwrap_or(0),
+                        // part 3 is unused
+                        realname: command_parts[4..]
+                            .join(" ")
+                            .strip_prefix(":")
+                            .ok_or_else(|| ParseError::new("Command"))?
+                            .to_string(),
+                    })
+                } else {
+                    Err(ParseError::new("Command"))
+                }
+            }
+            "PING" => match command_parts.len() {
+                1 => Ok(Command::Ping {
+                    to: None,
+                    from: None,
+                }),
+                2 => {
+                    if command_parts[1].starts_with(':') {
+                        Ok(Command::Ping {
+                            to: None,
+                            from: command_parts[1].get(1..).map(|s| s.to_string()),
+                        })
+                    } else {
+                        Ok(Command::Ping {
+                            to: Some(command_parts[1].to_string()),
+                            from: None,
+                        })
+                    }
+                }
+                3 => Ok(Command::Ping {
+                    to: Some(command_parts[2].to_string()),
+                    from: Some(command_parts[1].to_string()),
+                }),
+                _ => Err(ParseError::new("Command")),
+            },
+            "PONG" => match command_parts.len() {
+                2 => Ok(Command::Pong {
+                    to: None,
+                    from: command_parts[1].to_string(),
+                }),
+                3 => Ok(Command::Pong {
+                    to: Some(command_parts[2].to_string()),
+                    from: command_parts[1].to_string(),
+                }),
+                _ => Err(ParseError::new("Command")),
+            },
+            _ => Err(ParseError::new("Command")),
+        }
     }
 }
 
-pub fn to_raw(command: Command) -> String {
-    match command {
-        Command::Pass { password } => format!("PASS {}", password),
-        Command::Nick { nickname, hopcount } => match hopcount {
-            Some(hopcount) => format!("NICK {} {}", nickname, hopcount),
-            None => format!("NICK {}", nickname),
-        },
-        Command::User {
-            username,
-            mode,
-            realname,
-        } => format!("USER {} {} * :{}", username, mode, realname),
-        Command::Ping { to, from } => match (to, from) {
-            (Some(to), Some(from)) => format!("PING {} {}", from, to),
-            (Some(to), None) => format!("PING {}", to),
-            (None, Some(from)) => format!("PING :{}", from),
-            (None, None) => "PING".to_string(),
-        },
-        Command::Pong { to, from } => match to {
-            Some(to) => format!("PONG {} {}", from, to),
-            None => format!("PONG {}", from),
-        },
+impl From<Command> for String {
+    fn from(command: Command) -> String {
+        match command {
+            Command::Pass { password } => format!("PASS {}", password),
+            Command::Nick { nickname, hopcount } => match hopcount {
+                Some(hopcount) => format!("NICK {} {}", nickname, hopcount),
+                None => format!("NICK {}", nickname),
+            },
+            Command::User {
+                username,
+                mode,
+                realname,
+            } => format!("USER {} {} * :{}", username, mode, realname),
+            Command::Ping { to, from } => match (to, from) {
+                (Some(to), Some(from)) => format!("PING {} {}", from, to),
+                (Some(to), None) => format!("PING {}", to),
+                (None, Some(from)) => format!("PING :{}", from),
+                (None, None) => "PING".to_string(),
+            },
+            Command::Pong { to, from } => match to {
+                Some(to) => format!("PONG {} {}", from, to),
+                None => format!("PONG {}", from),
+            },
+        }
     }
 }
 
@@ -144,27 +160,27 @@ mod tests {
     use super::*;
 
     #[test]
-    fn to_raw_pass() {
+    fn string_from_pass() {
         assert_eq!(
-            "PASS mysecretpass",
-            to_raw(Command::Pass {
+            "PASS mysecretpass".to_string(),
+            String::from(Command::Pass {
                 password: "mysecretpass".to_string(),
             }),
         );
     }
 
     #[test]
-    fn to_raw_nick() {
+    fn string_from_nick() {
         assert_eq!(
-            "NICK potato",
-            to_raw(Command::Nick {
+            "NICK potato".to_string(),
+            String::from(Command::Nick {
                 nickname: "potato".to_string(),
                 hopcount: None,
             }),
         );
         assert_eq!(
-            "NICK carrot 5",
-            to_raw(Command::Nick {
+            "NICK carrot 5".to_string(),
+            String::from(Command::Nick {
                 nickname: "carrot".to_string(),
                 hopcount: Some(5),
             }),
@@ -172,10 +188,10 @@ mod tests {
     }
 
     #[test]
-    fn to_raw_user() {
+    fn string_from_user() {
         assert_eq!(
-            "USER pjohnson 0 * :Potato Johnson",
-            to_raw(Command::User {
+            "USER pjohnson 0 * :Potato Johnson".to_string(),
+            String::from(Command::User {
                 username: "pjohnson".to_string(),
                 mode: 0,
                 realname: "Potato Johnson".to_string(),
@@ -184,31 +200,31 @@ mod tests {
     }
 
     #[test]
-    fn to_raw_ping() {
+    fn string_from_ping() {
         assert_eq!(
-            "PING",
-            to_raw(Command::Ping {
+            "PING".to_string(),
+            String::from(Command::Ping {
                 to: None,
                 from: None
             }),
         );
         assert_eq!(
-            "PING :me",
-            to_raw(Command::Ping {
+            "PING :me".to_string(),
+            String::from(Command::Ping {
                 to: None,
                 from: Some("me".to_string()),
             }),
         );
         assert_eq!(
-            "PING myserver",
-            to_raw(Command::Ping {
+            "PING myserver".to_string(),
+            String::from(Command::Ping {
                 to: Some("myserver".to_string()),
                 from: None
             }),
         );
         assert_eq!(
-            "PING me myserver",
-            to_raw(Command::Ping {
+            "PING me myserver".to_string(),
+            String::from(Command::Ping {
                 to: Some("myserver".to_string()),
                 from: Some("me".to_string()),
             }),
@@ -216,17 +232,17 @@ mod tests {
     }
 
     #[test]
-    fn to_raw_pong() {
+    fn string_from_pong() {
         assert_eq!(
-            "PONG me",
-            to_raw(Command::Pong {
+            "PONG me".to_string(),
+            String::from(Command::Pong {
                 from: "me".to_string(),
                 to: None,
             }),
         );
         assert_eq!(
-            "PONG me myserver",
-            to_raw(Command::Pong {
+            "PONG me myserver".to_string(),
+            String::from(Command::Pong {
                 from: "me".to_string(),
                 to: Some("myserver".to_string()),
             }),
@@ -234,118 +250,105 @@ mod tests {
     }
 
     #[test]
-    fn from_raw_pass() {
-        let command = from_raw("PASS mysecretpass");
-        if let Some(Command::Pass { password }) = command {
-            assert_eq!("mysecretpass", password);
-        } else {
-            panic!("Wrong type: {:?}", command);
-        }
+    fn pass_from_string() {
+        assert_eq!(
+            Ok(Command::Pass {
+                password: "mysecretpass".to_string()
+            }),
+            "PASS mysecretpass".parse::<Command>()
+        );
     }
 
     #[test]
-    fn from_raw_nick() {
-        let command = from_raw("NICK somebody");
-        if let Some(Command::Nick { nickname, hopcount }) = command {
-            assert_eq!("somebody", nickname);
-            assert_eq!(None, hopcount);
-        } else {
-            panic!("Wrong type: {:?}", command);
-        }
-
-        let command = from_raw("NICK anybody 5");
-        if let Some(Command::Nick { nickname, hopcount }) = command {
-            assert_eq!("anybody", nickname);
-            assert_eq!(Some(5), hopcount);
-        } else {
-            panic!("Wrong type: {:?}", command);
-        }
-
-        let command = from_raw("NICK anybody potato");
-        if let Some(Command::Nick { nickname, hopcount }) = command {
-            assert_eq!("anybody", nickname);
-            assert_eq!(None, hopcount);
-        } else {
-            panic!("Wrong type: {:?}", command);
-        }
+    fn nick_from_string() {
+        assert_eq!(
+            Ok(Command::Nick {
+                nickname: "somebody".to_string(),
+                hopcount: None
+            }),
+            "NICK somebody".parse::<Command>()
+        );
+        assert_eq!(
+            Ok(Command::Nick {
+                nickname: "anybody".to_string(),
+                hopcount: Some(5)
+            }),
+            "NICK anybody 5".parse::<Command>()
+        );
+        assert_eq!(
+            Ok(Command::Nick {
+                nickname: "anybody".to_string(),
+                hopcount: None
+            }),
+            "NICK anybody potato".parse::<Command>()
+        );
     }
 
     #[test]
-    fn from_raw_user() {
-        assert!(from_raw("USER pjohnson 0 *").is_none());
-        assert!(from_raw("USER pjohnson 0 * realname").is_none());
+    fn user_from_string() {
+        assert!("USER pjohnson 0 *".parse::<Command>().is_err());
+        assert!("USER pjohnson 0 * realname".parse::<Command>().is_err());
 
-        let command = from_raw("USER pjohnson 0 * :Potato Johnson");
-        if let Some(Command::User {
-            username,
-            mode,
-            realname,
-        }) = command
-        {
-            assert_eq!("pjohnson", username);
-            assert_eq!(0, mode);
-            assert_eq!("Potato Johnson", realname);
-        } else {
-            panic!("Wrong type: {:?}", command);
-        }
+        assert_eq!(
+            Ok(Command::User {
+                username: "pjohnson".to_string(),
+                mode: 0,
+                realname: "Potato Johnson".to_string()
+            }),
+            "USER pjohnson 0 * :Potato Johnson".parse::<Command>()
+        );
     }
 
     #[test]
-    fn from_raw_ping() {
-        let command = from_raw("PING");
-        if let Some(Command::Ping { to, from }) = command {
-            assert!(to.is_none());
-            assert!(from.is_none());
-        } else {
-            panic!("Wrong type: {:?}", command);
-        }
-
-        let command = from_raw("PING myserver");
-        if let Some(Command::Ping { to, from }) = command {
-            assert_eq!(Some("myserver".to_string()), to);
-            assert!(from.is_none());
-        } else {
-            panic!("Wrong type: {:?}", command);
-        }
-
-        let command = from_raw("PING me myserver");
-        if let Some(Command::Ping { to, from }) = command {
-            assert_eq!(Some("myserver".to_string()), to);
-            assert_eq!(Some("me".to_string()), from);
-        } else {
-            panic!("Wrong type: {:?}", command);
-        }
-
-        let command = from_raw("PING :me");
-        if let Some(Command::Ping { to, from }) = command {
-            assert!(to.is_none());
-            assert_eq!(Some("me".to_string()), from);
-        } else {
-            panic!("Wrong type: {:?}", command);
-        }
-
-        assert!(from_raw("PING a b c").is_none());
+    fn ping_from_string() {
+        assert_eq!(
+            Ok(Command::Ping {
+                to: None,
+                from: None
+            }),
+            "PING".parse::<Command>()
+        );
+        assert_eq!(
+            Ok(Command::Ping {
+                to: Some("myserver".to_string()),
+                from: None
+            }),
+            "PING myserver".parse::<Command>()
+        );
+        assert_eq!(
+            Ok(Command::Ping {
+                to: Some("myserver".to_string()),
+                from: Some("me".to_string())
+            }),
+            "PING me myserver".parse::<Command>()
+        );
+        assert_eq!(
+            Ok(Command::Ping {
+                to: None,
+                from: Some("me".to_string())
+            }),
+            "PING :me".parse::<Command>()
+        );
+        assert!("PING a b c".parse::<Command>().is_err());
     }
 
     #[test]
-    fn from_raw_pong() {
-        let command = from_raw("PONG me");
-        if let Some(Command::Pong { to, from }) = command {
-            assert_eq!("me".to_string(), from);
-            assert!(to.is_none());
-        } else {
-            panic!("Wrong type: {:?}", command);
-        }
-
-        let command = from_raw("PONG me myserver");
-        if let Some(Command::Pong { to, from }) = command {
-            assert_eq!("me".to_string(), from);
-            assert_eq!(Some("myserver".to_string()), to);
-        } else {
-            panic!("Wrong type: {:?}", command);
-        }
-
-        assert!(from_raw("PONG").is_none());
-        assert!(from_raw("PONG a b c").is_none());
+    fn pong_from_string() {
+        assert_eq!(
+            Ok(Command::Pong {
+                to: None,
+                from: "me".to_string()
+            }),
+            "PONG me".parse::<Command>()
+        );
+        assert_eq!(
+            Ok(Command::Pong {
+                to: Some("myserver".to_string()),
+                from: "me".to_string()
+            }),
+            "PONG me myserver".parse::<Command>()
+        );
+        assert!("PONG".parse::<Command>().is_err());
+        assert!("PONG a b c".parse::<Command>().is_err());
     }
 }
