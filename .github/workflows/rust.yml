@@ -18,7 +18,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Run rustfmt
-        run: find src -name '*.rs' -exec rustfmt --check '{}' +
+        run: find src tests -name '*.rs' -exec rustfmt --check '{}' +
 
   unit-tests:
     name: Unit tests
