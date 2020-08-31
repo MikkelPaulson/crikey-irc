@@ -171,6 +171,76 @@ impl From<MsgTo> for String {
     }
 }
 
+#[derive(PartialEq, Debug)]
+pub enum Sender {
+    User {
+        nickname: Nickname,
+        user: Option<User>,
+        host: Option<Host>,
+    },
+    Server(Servername),
+}
+
+impl FromStr for Sender {
+    type Err = ParseError;
+
+    fn from_str(raw: &str) -> Result<Self, Self::Err> {
+        if let (Ok(servername), true) = (raw.parse(), raw.contains('.')) {
+            Ok(Sender::Server(servername))
+        } else {
+            match &raw.matches(&['!', '@'][..]).collect::<String>()[..] {
+                "!@" => {
+                    let parts: Vec<&str> = raw.split(&['!', '@'][..]).collect();
+                    Ok(Sender::User {
+                        nickname: parts[0].parse()?,
+                        user: Some(parts[1].parse()?),
+                        host: Some(parts[2].parse()?),
+                    })
+                }
+                "@" => {
+                    let parts: Vec<&str> = raw.split('@').collect();
+                    Ok(Sender::User {
+                        nickname: parts[0].parse()?,
+                        user: None,
+                        host: Some(parts[1].parse()?),
+                    })
+                }
+                "" => Ok(Sender::User {
+                    nickname: raw.parse()?,
+                    user: None,
+                    host: None,
+                }),
+                _ => Err(ParseError::new("Sender")),
+            }
+        }
+    }
+}
+
+impl From<Sender> for String {
+    fn from(sender: Sender) -> String {
+        match sender {
+            Sender::Server(servername) => String::from(servername),
+            Sender::User {
+                nickname,
+                user,
+                host,
+            } => {
+                let mut result = String::from(nickname);
+                if let Some(host) = host {
+                    if let Some(user) = user {
+                        result.push('!');
+                        result.push_str(&String::from(user))
+                    }
+
+                    result.push('@');
+                    result.push_str(&String::from(host));
+                }
+                result
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -260,6 +330,44 @@ mod tests {
         assert_eq!(
             MsgTo::UserHost("user".parse().unwrap(), "host".parse().unwrap()),
             "user%host".parse::<MsgTo>().unwrap()
+        );
+    }
+
+    #[test]
+    fn invalid_sender() {
+        assert!("".parse::<Sender>().is_err());
+        assert!("nickname!user".parse::<Sender>().is_err());
+    }
+
+    #[test]
+    fn valid_sender() {
+        assert_eq!(
+            Ok(Sender::User {
+                nickname: "nickname".parse().unwrap(),
+                user: None,
+                host: None,
+            }),
+            "nickname".parse::<Sender>()
+        );
+        assert_eq!(
+            Ok(Sender::User {
+                nickname: "nickname".parse().unwrap(),
+                user: None,
+                host: Some("host.name".parse().unwrap())
+            }),
+            "nickname@host.name".parse::<Sender>()
+        );
+        assert_eq!(
+            Ok(Sender::User {
+                nickname: "nickname".parse().unwrap(),
+                user: Some("user".parse().unwrap()),
+                host: Some("host.name".parse().unwrap())
+            }),
+            "nickname!user@host.name".parse::<Sender>()
+        );
+        assert_eq!(
+            Ok(Sender::Server("irc.example.com".parse().unwrap())),
+            "irc.example.com".parse::<Sender>()
         );
     }
 
