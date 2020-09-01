@@ -8,6 +8,7 @@ pub use self::message::{Message, MessageBody};
 pub use self::msg_target::{Recipient, Sender};
 pub use self::nickname::Nickname;
 pub use self::reply::{Reply, ReplyType};
+pub use self::stats_query::StatsQuery;
 pub use self::target_mask::{HostMask, ServerMask, TargetMask};
 pub use self::user::User;
 
@@ -27,6 +28,7 @@ mod message;
 mod msg_target;
 mod nickname;
 mod reply;
+mod stats_query;
 mod target_mask;
 mod user;
 
