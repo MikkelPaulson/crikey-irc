@@ -1,39 +1,6 @@
 use super::{Channel, Host, Nickname, ParseError, Servername, TargetMask, User};
-use std::borrow::Borrow;
 use std::result::Result;
 use std::str::FromStr;
-
-#[derive(PartialEq, Debug)]
-pub struct MsgTarget(Vec<MsgTo>);
-
-impl FromStr for MsgTarget {
-    type Err = ParseError;
-
-    fn from_str(raw: &str) -> Result<Self, Self::Err> {
-        let mut targets = Vec::<MsgTo>::new();
-        for msg_to in raw.split(',') {
-            targets.push(msg_to.parse()?);
-        }
-        Ok(Self(targets))
-    }
-}
-
-impl From<MsgTarget> for String {
-    fn from(msg_target: MsgTarget) -> String {
-        msg_target
-            .0
-            .into_iter()
-            .map(|a| String::from(a))
-            .collect::<Vec<String>>()
-            .join(",")
-    }
-}
-
-impl Borrow<Vec<MsgTo>> for MsgTarget {
-    fn borrow(&self) -> &Vec<MsgTo> {
-        &self.0
-    }
-}
 
 /// A single target of a message such as PRIVMSG. This can take many different
 /// forms:
@@ -83,7 +50,7 @@ impl Borrow<Vec<MsgTo>> for MsgTarget {
 /// - "user%host" => is the username "user%host" or "user"? "user"
 /// - "user%host%host" => what is even happening here? invalid, reject
 #[derive(PartialEq, Debug)]
-pub enum MsgTo {
+pub enum Recipient {
     Channel(Channel),
     Nickname(Nickname),
     NicknameUserHost(Nickname, User, Host), // nickname!user@host
@@ -93,27 +60,27 @@ pub enum MsgTo {
     UserServername(User, Servername),           // user@servername
 }
 
-impl FromStr for MsgTo {
+impl FromStr for Recipient {
     type Err = ParseError;
 
     fn from_str(raw: &str) -> Result<Self, Self::Err> {
         if raw.starts_with('#') && raw.contains(&['*', '?'][..]) {
             if let Ok(target_mask) = raw.parse() {
-                return Ok(MsgTo::TargetMask(target_mask));
+                return Ok(Recipient::TargetMask(target_mask));
             }
         }
 
         if let Ok(channel) = raw.parse() {
-            Ok(MsgTo::Channel(channel))
+            Ok(Recipient::Channel(channel))
         } else if let Ok(target_mask) = raw.parse() {
-            Ok(MsgTo::TargetMask(target_mask))
+            Ok(Recipient::TargetMask(target_mask))
         } else if let Ok(nickname) = raw.parse() {
-            Ok(MsgTo::Nickname(nickname))
+            Ok(Recipient::Nickname(nickname))
         } else {
             match &raw.matches(&['!', '@', '%'][..]).collect::<String>()[..] {
                 "!@" => {
                     let parts: Vec<&str> = raw.split(&['!', '@'][..]).collect();
-                    Ok(MsgTo::NicknameUserHost(
+                    Ok(Recipient::NicknameUserHost(
                         parts[0].parse()?,
                         parts[1].parse()?,
                         parts[2].parse()?,
@@ -121,7 +88,7 @@ impl FromStr for MsgTo {
                 }
                 "%@" => {
                     let parts: Vec<&str> = raw.split(&['%', '@'][..]).collect();
-                    Ok(MsgTo::UserHostServername(
+                    Ok(Recipient::UserHostServername(
                         parts[0].parse()?,
                         parts[1].parse()?,
                         parts[2].parse()?,
@@ -129,24 +96,24 @@ impl FromStr for MsgTo {
                 }
                 "%" => {
                     let parts: Vec<&str> = raw.split('%').collect();
-                    Ok(MsgTo::UserHost(parts[0].parse()?, parts[1].parse()?))
+                    Ok(Recipient::UserHost(parts[0].parse()?, parts[1].parse()?))
                 }
                 "@" => {
                     let parts: Vec<&str> = raw.split('@').collect();
-                    Ok(MsgTo::UserServername(parts[0].parse()?, parts[1].parse()?))
+                    Ok(Recipient::UserServername(parts[0].parse()?, parts[1].parse()?))
                 }
-                _ => Err(ParseError::new("MsgTo")),
+                _ => Err(ParseError::new("Recipient")),
             }
         }
     }
 }
 
-impl From<MsgTo> for String {
-    fn from(msg_to: MsgTo) -> String {
+impl From<Recipient> for String {
+    fn from(msg_to: Recipient) -> String {
         match msg_to {
-            MsgTo::Channel(channel) => String::from(channel),
-            MsgTo::Nickname(nickname) => String::from(nickname),
-            MsgTo::NicknameUserHost(nickname, user, host) => [
+            Recipient::Channel(channel) => String::from(channel),
+            Recipient::Nickname(nickname) => String::from(nickname),
+            Recipient::NicknameUserHost(nickname, user, host) => [
                 &String::from(nickname),
                 "!",
                 &String::from(user),
@@ -154,9 +121,9 @@ impl From<MsgTo> for String {
                 &String::from(host),
             ]
             .join(""),
-            MsgTo::TargetMask(target_mask) => String::from(target_mask),
-            MsgTo::UserHost(user, host) => [String::from(user), String::from(host)].join("%"),
-            MsgTo::UserHostServername(user, host, servername) => [
+            Recipient::TargetMask(target_mask) => String::from(target_mask),
+            Recipient::UserHost(user, host) => [String::from(user), String::from(host)].join("%"),
+            Recipient::UserHostServername(user, host, servername) => [
                 &String::from(user),
                 "%",
                 &String::from(host),
@@ -164,10 +131,149 @@ impl From<MsgTo> for String {
                 &String::from(servername),
             ]
             .join(""),
-            MsgTo::UserServername(user, servername) => {
+            Recipient::UserServername(user, servername) => {
                 [String::from(user), String::from(servername)].join("@")
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod test_recipient {
+    use super::*;
+    use super::super::KeywordList;
+
+    #[test]
+    fn valid_list() {
+        let keyword_list = KeywordList::<Recipient>::new();
+        assert_eq!(
+            Ok(keyword_list),
+            "".parse::<KeywordList<Recipient>>()
+        );
+
+        let mut keyword_list = KeywordList::new();
+        keyword_list.push(Recipient::Channel("#channel".parse().unwrap()));
+        keyword_list.push(Recipient::Nickname("nickname".parse().unwrap()));
+        keyword_list.push(Recipient::NicknameUserHost("NUHnickname".parse().unwrap(), "NUHuser".parse().unwrap(), "NUHhost".parse().unwrap()));
+        keyword_list.push(Recipient::TargetMask("$target.mask".parse().unwrap()));
+        keyword_list.push(Recipient::UserHost("UHuser".parse().unwrap(), "UHhost".parse().unwrap()));
+        keyword_list.push(Recipient::UserHostServername("UHSuser".parse().unwrap(), "UHShost".parse().unwrap(), "UHSservername".parse().unwrap()));
+        keyword_list.push(Recipient::UserServername("USuser".parse().unwrap(), "USservername".parse().unwrap()));
+        assert_eq!(
+            Ok(keyword_list),
+            "#channel,nickname,NUHnickname!NUHuser@NUHhost,$target.mask,UHuser%UHhost,UHSuser%UHShost@UHSservername,USuser@USservername".parse::<KeywordList<Recipient>>()
+        );
+    }
+
+    #[test]
+    fn invalid() {
+        assert!("".parse::<Recipient>().is_err());
+        assert!("user%host%host".parse::<Recipient>().is_err());
+        assert!("🥔️".parse::<Recipient>().is_err());
+    }
+
+    #[test]
+    fn valid() {
+        assert_eq!(
+            Ok(Recipient::Nickname("mynick".parse().unwrap())),
+            "mynick".parse::<Recipient>()
+        );
+        assert_eq!(
+            Ok(Recipient::NicknameUserHost(
+                "mynick".parse().unwrap(),
+                "user".parse().unwrap(),
+                "host".parse().unwrap()
+            )),
+            "mynick!user@host".parse::<Recipient>()
+        );
+        assert_eq!(
+            Ok(Recipient::UserServername("user".parse().unwrap(), "servername".parse().unwrap())),
+            "user@servername".parse::<Recipient>()
+        );
+        assert_eq!(
+            Ok(Recipient::Nickname("mynick".parse().unwrap())),
+            "mynick".parse::<Recipient>()
+        );
+        assert_eq!(
+            Ok(Recipient::Channel("#rando.chan".parse().unwrap())),
+            "#rando.chan".parse::<Recipient>()
+        );
+        assert_eq!(
+            Ok(Recipient::TargetMask("#*.com".parse().unwrap())),
+            "#*.com".parse::<Recipient>()
+        );
+        assert_eq!(
+            Ok(Recipient::Channel("#user@example.com".parse().unwrap())),
+            "#user@example.com".parse::<Recipient>()
+        );
+        assert_eq!(
+            Ok(Recipient::UserHostServername(
+                "user".parse().unwrap(),
+                "host".parse().unwrap(),
+                "example.com".parse().unwrap()
+            )),
+            "user%host@example.com".parse::<Recipient>()
+        );
+        assert_eq!(
+            Ok(Recipient::UserHost("user".parse().unwrap(), "host".parse().unwrap())),
+            "user%host".parse::<Recipient>()
+        );
+    }
+
+    #[test]
+    fn into_string() {
+        assert_eq!(
+            "#mychan".to_string(),
+            String::from(Recipient::Channel("#mychan".parse().unwrap()))
+        );
+        assert_eq!(
+            "mynick".to_string(),
+            String::from(Recipient::Nickname("mynick".parse().unwrap()))
+        );
+        assert_eq!(
+            "nickname!user@host".to_string(),
+            String::from(Recipient::NicknameUserHost(
+                "nickname".parse().unwrap(),
+                "user".parse().unwrap(),
+                "host".parse().unwrap()
+            ))
+        );
+        assert_eq!(
+            "$target.mask".to_string(),
+            String::from(Recipient::TargetMask("$target.mask".parse().unwrap()))
+        );
+        assert_eq!(
+            "user%host".to_string(),
+            String::from(Recipient::UserHost(
+                "user".parse().unwrap(),
+                "host".parse().unwrap()
+            ))
+        );
+        assert_eq!(
+            "user%host@servername".to_string(),
+            String::from(Recipient::UserHostServername(
+                "user".parse().unwrap(),
+                "host".parse().unwrap(),
+                "servername".parse().unwrap()
+            ))
+        );
+        assert_eq!(
+            "user@servername".to_string(),
+            String::from(Recipient::UserServername(
+                "user".parse().unwrap(),
+                "servername".parse().unwrap()
+            ))
+        );
+
+        let mut keyword_list = KeywordList::new();
+        keyword_list.push(Recipient::Channel("#channel1".parse().unwrap()));
+        keyword_list.push(Recipient::Nickname("nick1".parse().unwrap()));
+        keyword_list.push(Recipient::Channel("#channel2".parse().unwrap()));
+        keyword_list.push(Recipient::Nickname("nick2".parse().unwrap()));
+        assert_eq!(
+            "#channel1,nick1,#channel2,nick2".to_string(),
+            String::from(keyword_list)
+        );
     }
 }
 
@@ -242,105 +348,17 @@ impl From<Sender> for String {
 }
 
 #[cfg(test)]
-mod tests {
+mod test_sender {
     use super::*;
 
     #[test]
-    fn invalid_msgtarget() {
-        assert!("".parse::<MsgTarget>().is_err());
-    }
-
-    #[test]
-    fn valid_msgtarget() {
-        assert_eq!(
-            MsgTarget(vec![MsgTo::Nickname("mynick".parse().unwrap())]),
-            "mynick".parse::<MsgTarget>().unwrap()
-        );
-        assert_eq!(
-            MsgTarget(vec![MsgTo::Channel("#mychan".parse().unwrap())]),
-            "#mychan".parse::<MsgTarget>().unwrap()
-        );
-        assert_eq!(
-            MsgTarget(vec![MsgTo::TargetMask("$my.target.mask".parse().unwrap())]),
-            "$my.target.mask".parse::<MsgTarget>().unwrap()
-        );
-        assert_eq!(
-            MsgTarget(vec![
-                MsgTo::Channel("#channel".parse().unwrap()),
-                MsgTo::Nickname("nickname".parse().unwrap()),
-                MsgTo::NicknameUserHost("NUHnickname".parse().unwrap(), "NUHuser".parse().unwrap(), "NUHhost".parse().unwrap()),
-                MsgTo::TargetMask("$target.mask".parse().unwrap()),
-                MsgTo::UserHost("UHuser".parse().unwrap(), "UHhost".parse().unwrap()),
-                MsgTo::UserHostServername("UHSuser".parse().unwrap(), "UHShost".parse().unwrap(), "UHSservername".parse().unwrap()),
-                MsgTo::UserServername("USuser".parse().unwrap(), "USservername".parse().unwrap()),
-            ]),
-            "#channel,nickname,NUHnickname!NUHuser@NUHhost,$target.mask,UHuser%UHhost,UHSuser%UHShost@UHSservername,USuser@USservername".parse::<MsgTarget>().unwrap()
-        );
-    }
-
-    #[test]
-    fn invalid_msgto() {
-        assert!("".parse::<MsgTo>().is_err());
-        assert!("user%host%host".parse::<MsgTo>().is_err());
-        assert!("🥔️".parse::<MsgTo>().is_err());
-    }
-
-    #[test]
-    fn valid_msgto() {
-        assert_eq!(
-            MsgTo::Nickname("mynick".parse().unwrap()),
-            "mynick".parse::<MsgTo>().unwrap()
-        );
-        assert_eq!(
-            MsgTo::NicknameUserHost(
-                "mynick".parse().unwrap(),
-                "user".parse().unwrap(),
-                "host".parse().unwrap()
-            ),
-            "mynick!user@host".parse::<MsgTo>().unwrap()
-        );
-        assert_eq!(
-            MsgTo::UserServername("user".parse().unwrap(), "servername".parse().unwrap()),
-            "user@servername".parse::<MsgTo>().unwrap()
-        );
-        assert_eq!(
-            MsgTo::Nickname("mynick".parse().unwrap()),
-            "mynick".parse::<MsgTo>().unwrap()
-        );
-        assert_eq!(
-            MsgTo::Channel("#rando.chan".parse().unwrap()),
-            "#rando.chan".parse::<MsgTo>().unwrap()
-        );
-        assert_eq!(
-            MsgTo::TargetMask("#*.com".parse().unwrap()),
-            "#*.com".parse::<MsgTo>().unwrap()
-        );
-        assert_eq!(
-            MsgTo::Channel("#user@example.com".parse().unwrap()),
-            "#user@example.com".parse::<MsgTo>().unwrap()
-        );
-        assert_eq!(
-            MsgTo::UserHostServername(
-                "user".parse().unwrap(),
-                "host".parse().unwrap(),
-                "example.com".parse().unwrap()
-            ),
-            "user%host@example.com".parse::<MsgTo>().unwrap()
-        );
-        assert_eq!(
-            MsgTo::UserHost("user".parse().unwrap(), "host".parse().unwrap()),
-            "user%host".parse::<MsgTo>().unwrap()
-        );
-    }
-
-    #[test]
-    fn invalid_sender() {
+    fn invalid() {
         assert!("".parse::<Sender>().is_err());
         assert!("nickname!user".parse::<Sender>().is_err());
     }
 
     #[test]
-    fn valid_sender() {
+    fn valid() {
         assert_eq!(
             Ok(Sender::User {
                 nickname: "nickname".parse().unwrap(),
@@ -368,62 +386,6 @@ mod tests {
         assert_eq!(
             Ok(Sender::Server("irc.example.com".parse().unwrap())),
             "irc.example.com".parse::<Sender>()
-        );
-    }
-
-    #[test]
-    fn into_string() {
-        assert_eq!(
-            "#mychan".to_string(),
-            String::from(MsgTo::Channel("#mychan".parse().unwrap()))
-        );
-        assert_eq!(
-            "mynick".to_string(),
-            String::from(MsgTo::Nickname("mynick".parse().unwrap()))
-        );
-        assert_eq!(
-            "nickname!user@host".to_string(),
-            String::from(MsgTo::NicknameUserHost(
-                "nickname".parse().unwrap(),
-                "user".parse().unwrap(),
-                "host".parse().unwrap()
-            ))
-        );
-        assert_eq!(
-            "$target.mask".to_string(),
-            String::from(MsgTo::TargetMask("$target.mask".parse().unwrap()))
-        );
-        assert_eq!(
-            "user%host".to_string(),
-            String::from(MsgTo::UserHost(
-                "user".parse().unwrap(),
-                "host".parse().unwrap()
-            ))
-        );
-        assert_eq!(
-            "user%host@servername".to_string(),
-            String::from(MsgTo::UserHostServername(
-                "user".parse().unwrap(),
-                "host".parse().unwrap(),
-                "servername".parse().unwrap()
-            ))
-        );
-        assert_eq!(
-            "user@servername".to_string(),
-            String::from(MsgTo::UserServername(
-                "user".parse().unwrap(),
-                "servername".parse().unwrap()
-            ))
-        );
-
-        assert_eq!(
-            "#channel1,nick1,#channel2,nick2".to_string(),
-            String::from(MsgTarget(vec![
-                MsgTo::Channel("#channel1".parse().unwrap()),
-                MsgTo::Nickname("nick1".parse().unwrap()),
-                MsgTo::Channel("#channel2".parse().unwrap()),
-                MsgTo::Nickname("nick2".parse().unwrap()),
-            ]))
         );
     }
 }
