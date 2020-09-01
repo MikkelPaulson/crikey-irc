@@ -1,4 +1,4 @@
-use super::ParseError;
+use super::{CommandArgs, ParseError};
 use std::result::Result;
 use std::str::FromStr;
 
@@ -43,27 +43,29 @@ impl FromStr for Command {
     type Err = ParseError;
 
     fn from_str(raw: &str) -> Result<Self, Self::Err> {
-        let command_parts: Vec<&str> = raw.split(' ').collect();
+        let (raw_command, raw_args) = if let Some(index) = raw.find(' ') {
+            (&raw[..index], &raw[index + 1..])
+        } else {
+            (raw, "")
+        };
 
-        match command_parts
-            .first()
-            .ok_or_else(|| ParseError::new("Command"))?
-            .as_ref()
-        {
+        let args = raw_args.parse::<CommandArgs>()?;
+
+        match raw_command {
             "PASS" => {
-                if command_parts.len() == 2 {
+                if args.len() == 1 {
                     Ok(Command::Pass {
-                        password: command_parts[1].to_string(),
+                        password: args[0].to_string(),
                     })
                 } else {
                     Err(ParseError::new("Command"))
                 }
             }
             "NICK" => {
-                if command_parts.len() >= 2 && command_parts.len() <= 3 {
+                if args.len() >= 1 && args.len() <= 2 {
                     Ok(Command::Nick {
-                        nickname: command_parts[1].to_string(),
-                        hopcount: match command_parts.get(2) {
+                        nickname: args[0].to_string(),
+                        hopcount: match args.get(1) {
                             Some(n) => u8::from_str(n).ok(),
                             None => None,
                         },
@@ -73,53 +75,43 @@ impl FromStr for Command {
                 }
             }
             "USER" => {
-                if command_parts.len() >= 5 {
+                if args.len() == 4 {
                     Ok(Command::User {
-                        username: command_parts[1].to_string(),
-                        mode: u8::from_str(command_parts[2]).unwrap_or(0),
+                        username: args[0].to_string(),
+                        mode: u8::from_str(&args[1]).unwrap_or(0),
                         // part 3 is unused
-                        realname: command_parts[4..]
-                            .join(" ")
-                            .strip_prefix(":")
+                        realname: args
+                            .get(3)
                             .ok_or_else(|| ParseError::new("Command"))?
-                            .to_string(),
+                            .to_owned(),
                     })
                 } else {
                     Err(ParseError::new("Command"))
                 }
             }
-            "PING" => match command_parts.len() {
-                1 => Ok(Command::Ping {
+            "PING" => match args.len() {
+                0 => Ok(Command::Ping {
                     to: None,
                     from: None,
                 }),
-                2 => {
-                    if command_parts[1].starts_with(':') {
-                        Ok(Command::Ping {
-                            to: None,
-                            from: command_parts[1].get(1..).map(|s| s.to_string()),
-                        })
-                    } else {
-                        Ok(Command::Ping {
-                            to: Some(command_parts[1].to_string()),
-                            from: None,
-                        })
-                    }
-                }
-                3 => Ok(Command::Ping {
-                    to: Some(command_parts[2].to_string()),
-                    from: Some(command_parts[1].to_string()),
+                1 => Ok(Command::Ping {
+                    to: Some(args[0].to_string()),
+                    from: None,
+                }),
+                2 => Ok(Command::Ping {
+                    to: Some(args[1].to_string()),
+                    from: Some(args[0].to_string()),
                 }),
                 _ => Err(ParseError::new("Command")),
             },
-            "PONG" => match command_parts.len() {
-                2 => Ok(Command::Pong {
+            "PONG" => match args.len() {
+                1 => Ok(Command::Pong {
                     to: None,
-                    from: command_parts[1].to_string(),
+                    from: args[0].to_string(),
                 }),
-                3 => Ok(Command::Pong {
-                    to: Some(command_parts[2].to_string()),
-                    from: command_parts[1].to_string(),
+                2 => Ok(Command::Pong {
+                    to: Some(args[1].to_string()),
+                    from: args[0].to_string(),
                 }),
                 _ => Err(ParseError::new("Command")),
             },
@@ -209,13 +201,6 @@ mod tests {
             }),
         );
         assert_eq!(
-            "PING :me".to_string(),
-            String::from(Command::Ping {
-                to: None,
-                from: Some("me".to_string()),
-            }),
-        );
-        assert_eq!(
             "PING myserver".to_string(),
             String::from(Command::Ping {
                 to: Some("myserver".to_string()),
@@ -287,7 +272,9 @@ mod tests {
     #[test]
     fn user_from_string() {
         assert!("USER pjohnson 0 *".parse::<Command>().is_err());
-        assert!("USER pjohnson 0 * realname".parse::<Command>().is_err());
+        assert!("USER pjohnson 0 * Potato Johnson"
+            .parse::<Command>()
+            .is_err());
 
         assert_eq!(
             Ok(Command::User {
@@ -321,13 +308,6 @@ mod tests {
                 from: Some("me".to_string())
             }),
             "PING me myserver".parse::<Command>()
-        );
-        assert_eq!(
-            Ok(Command::Ping {
-                to: None,
-                from: Some("me".to_string())
-            }),
-            "PING :me".parse::<Command>()
         );
         assert!("PING a b c".parse::<Command>().is_err());
     }
