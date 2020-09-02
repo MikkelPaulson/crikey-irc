@@ -76,7 +76,7 @@ fn name_from_string(raw: &str) -> Option<String> {
         if raw_part.len() < 1
             || !raw_part.starts_with(|c: char| c.is_ascii_alphanumeric())
             || !raw_part.ends_with(|c: char| c.is_ascii_alphanumeric())
-            || raw_part.contains(|c: char| !c.is_ascii_alphanumeric() && c != '-')
+            || raw_part.contains(|c: char| !c.is_ascii_alphanumeric() && c != '-' && c != '_')
         {
             return None;
         }

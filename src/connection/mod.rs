@@ -1,4 +1,4 @@
-pub use self::types::{Command, Message, MessageBody, Reply, ReplyType};
+pub use self::types::{Command, Message, MessageBody, Nickname, Reply, ReplyType, User};
 use std::io;
 use std::io::prelude::*;
 use std::net;
@@ -29,12 +29,16 @@ impl Connection {
                 if len == 0 {
                     panic!("Stream disconnected");
                 } else {
-                    if let Ok(message) = buffer.parse::<Message>() {
-                        println!("\x1B[94m<< {:?}\x1B[0m", message);
-                        Some(message)
-                    } else {
-                        println!("\x1B[91m<? {}\x1B[0m", buffer);
-                        None
+                    match buffer.parse::<Message>() {
+                        Ok(message) => {
+                            println!("\x1B[94m<< {:?}\x1B[0m", message);
+                            Some(message)
+                        }
+                        Err(e) => {
+                            print!("\x1B[91m<? {}\x1B[0m", buffer);
+                            println!("\x1B[91m   {:?}\x1B[0m", e);
+                            None
+                        }
                     }
                 }
             }

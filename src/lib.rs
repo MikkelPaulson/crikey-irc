@@ -9,8 +9,8 @@ mod terminal;
 
 pub fn run<A: net::ToSocketAddrs>(addr: A) -> io::Result<()> {
     let token = client::AuthToken {
-        nickname: "spudly".to_string(),
-        username: "pjohnson".to_string(),
+        nickname: "spudly".parse().unwrap(),
+        username: "pjohnson".parse().unwrap(),
         mode: 0,
         realname: "Potato Johnson".to_string(),
         password: None,

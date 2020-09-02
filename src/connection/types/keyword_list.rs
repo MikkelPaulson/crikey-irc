@@ -1,5 +1,5 @@
-use std::str::FromStr;
 use super::ParseError;
+use std::str::FromStr;
 
 #[derive(PartialEq, Debug)]
 pub struct KeywordList<T: FromStr + Into<String>>(Vec<T>);
@@ -21,7 +21,11 @@ impl<T: FromStr + Into<String>> FromStr for KeywordList<T> {
         let mut elements = Vec::<T>::new();
         if raw.len() > 0 {
             for element in raw.split(',') {
-                elements.push(element.parse().map_err(|_| ParseError::new("KeywordList"))?);
+                elements.push(
+                    element
+                        .parse()
+                        .map_err(|_| ParseError::new("KeywordList"))?,
+                );
             }
         }
         Ok(Self(elements))
@@ -44,13 +48,17 @@ mod test_keyword_list {
     use super::*;
 
     #[derive(PartialEq, Debug)]
-    struct TestStruct (char);
+    struct TestStruct(char);
 
     impl FromStr for TestStruct {
         type Err = ParseError;
 
         fn from_str(raw: &str) -> Result<Self, Self::Err> {
-            Ok(TestStruct(raw.chars().nth(0).ok_or_else(|| ParseError::new("TestStruct"))?))
+            Ok(TestStruct(
+                raw.chars()
+                    .nth(0)
+                    .ok_or_else(|| ParseError::new("TestStruct"))?,
+            ))
         }
     }
 
@@ -65,7 +73,11 @@ mod test_keyword_list {
     #[test]
     fn from_string() {
         assert_eq!(
-            Ok(KeywordList(vec![TestStruct('a'), TestStruct('d'), TestStruct('e')])),
+            Ok(KeywordList(vec![
+                TestStruct('a'),
+                TestStruct('d'),
+                TestStruct('e')
+            ])),
             "abc,d,e".parse::<KeywordList<TestStruct>>()
         );
         assert_eq!(
@@ -78,7 +90,11 @@ mod test_keyword_list {
     fn into_string() {
         assert_eq!(
             "a,b,c".to_string(),
-            String::from(KeywordList(vec![TestStruct('a'), TestStruct('b'), TestStruct('c')])),
+            String::from(KeywordList(vec![
+                TestStruct('a'),
+                TestStruct('b'),
+                TestStruct('c')
+            ])),
         );
         assert_eq!(
             "".to_string(),

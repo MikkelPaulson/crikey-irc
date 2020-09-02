@@ -66,8 +66,7 @@ mod message_tests {
             Ok(Message {
                 sender: None,
                 body: MessageBody::Command(Command::Nick {
-                    nickname: "me".to_string(),
-                    hopcount: None
+                    nickname: "me".parse().unwrap(),
                 })
             }),
             "NICK me\n".parse::<Message>()
@@ -88,8 +87,7 @@ mod message_tests {
             String::from(Message {
                 sender: None,
                 body: MessageBody::Command(Command::Nick {
-                    nickname: "me".to_string(),
-                    hopcount: None
+                    nickname: "me".parse().unwrap(),
                 })
             })
         );
@@ -169,8 +167,7 @@ mod message_body_tests {
         );
         assert_eq!(
             Ok(MessageBody::Command(Command::Nick {
-                nickname: "me".to_string(),
-                hopcount: None
+                nickname: "me".parse().unwrap(),
             })),
             "NICK me".parse::<MessageBody>()
         );
@@ -188,8 +185,7 @@ mod message_body_tests {
         assert_eq!(
             "NICK me".to_string(),
             String::from(MessageBody::Command(Command::Nick {
-                nickname: "me".to_string(),
-                hopcount: None
+                nickname: "me".parse().unwrap(),
             }))
         );
     }

@@ -100,7 +100,10 @@ impl FromStr for Recipient {
                 }
                 "@" => {
                     let parts: Vec<&str> = raw.split('@').collect();
-                    Ok(Recipient::UserServername(parts[0].parse()?, parts[1].parse()?))
+                    Ok(Recipient::UserServername(
+                        parts[0].parse()?,
+                        parts[1].parse()?,
+                    ))
                 }
                 _ => Err(ParseError::new("Recipient")),
             }
@@ -140,25 +143,36 @@ impl From<Recipient> for String {
 
 #[cfg(test)]
 mod test_recipient {
-    use super::*;
     use super::super::KeywordList;
+    use super::*;
 
     #[test]
     fn valid_list() {
         let keyword_list = KeywordList::<Recipient>::new();
-        assert_eq!(
-            Ok(keyword_list),
-            "".parse::<KeywordList<Recipient>>()
-        );
+        assert_eq!(Ok(keyword_list), "".parse::<KeywordList<Recipient>>());
 
         let mut keyword_list = KeywordList::new();
         keyword_list.push(Recipient::Channel("#channel".parse().unwrap()));
         keyword_list.push(Recipient::Nickname("nickname".parse().unwrap()));
-        keyword_list.push(Recipient::NicknameUserHost("NUHnickname".parse().unwrap(), "NUHuser".parse().unwrap(), "NUHhost".parse().unwrap()));
+        keyword_list.push(Recipient::NicknameUserHost(
+            "NUHnickname".parse().unwrap(),
+            "NUHuser".parse().unwrap(),
+            "NUHhost".parse().unwrap(),
+        ));
         keyword_list.push(Recipient::TargetMask("$target.mask".parse().unwrap()));
-        keyword_list.push(Recipient::UserHost("UHuser".parse().unwrap(), "UHhost".parse().unwrap()));
-        keyword_list.push(Recipient::UserHostServername("UHSuser".parse().unwrap(), "UHShost".parse().unwrap(), "UHSservername".parse().unwrap()));
-        keyword_list.push(Recipient::UserServername("USuser".parse().unwrap(), "USservername".parse().unwrap()));
+        keyword_list.push(Recipient::UserHost(
+            "UHuser".parse().unwrap(),
+            "UHhost".parse().unwrap(),
+        ));
+        keyword_list.push(Recipient::UserHostServername(
+            "UHSuser".parse().unwrap(),
+            "UHShost".parse().unwrap(),
+            "UHSservername".parse().unwrap(),
+        ));
+        keyword_list.push(Recipient::UserServername(
+            "USuser".parse().unwrap(),
+            "USservername".parse().unwrap(),
+        ));
         assert_eq!(
             Ok(keyword_list),
             "#channel,nickname,NUHnickname!NUHuser@NUHhost,$target.mask,UHuser%UHhost,UHSuser%UHShost@UHSservername,USuser@USservername".parse::<KeywordList<Recipient>>()
@@ -187,7 +201,10 @@ mod test_recipient {
             "mynick!user@host".parse::<Recipient>()
         );
         assert_eq!(
-            Ok(Recipient::UserServername("user".parse().unwrap(), "servername".parse().unwrap())),
+            Ok(Recipient::UserServername(
+                "user".parse().unwrap(),
+                "servername".parse().unwrap()
+            )),
             "user@servername".parse::<Recipient>()
         );
         assert_eq!(
@@ -215,7 +232,10 @@ mod test_recipient {
             "user%host@example.com".parse::<Recipient>()
         );
         assert_eq!(
-            Ok(Recipient::UserHost("user".parse().unwrap(), "host".parse().unwrap())),
+            Ok(Recipient::UserHost(
+                "user".parse().unwrap(),
+                "host".parse().unwrap()
+            )),
             "user%host".parse::<Recipient>()
         );
     }
@@ -319,6 +339,22 @@ impl FromStr for Sender {
                 _ => Err(ParseError::new("Sender")),
             }
         }
+    }
+}
+
+impl From<Nickname> for Sender {
+    fn from(nickname: Nickname) -> Sender {
+        Sender::User {
+            nickname,
+            host: None,
+            user: None,
+        }
+    }
+}
+
+impl From<Servername> for Sender {
+    fn from(servername: Servername) -> Sender {
+        Sender::Server(servername)
     }
 }
 

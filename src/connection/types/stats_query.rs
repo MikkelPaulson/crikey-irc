@@ -64,57 +64,21 @@ mod test_stats_query {
 
     #[test]
     fn valid() {
-        assert_eq!(
-            Ok(StatsQuery::List),
-            "l".parse::<StatsQuery>()
-        );
-        assert_eq!(
-            Ok(StatsQuery::UsageCount),
-            "m".parse::<StatsQuery>()
-        );
-        assert_eq!(
-            Ok(StatsQuery::Ops),
-            "o".parse::<StatsQuery>()
-        );
-        assert_eq!(
-            Ok(StatsQuery::Uptime),
-            "u".parse::<StatsQuery>()
-        );
-        assert_eq!(
-            Ok(StatsQuery::Unknown('a')),
-            "a".parse::<StatsQuery>()
-        );
-        assert_eq!(
-            Ok(StatsQuery::Unknown('0')),
-            "0".parse::<StatsQuery>()
-        );
+        assert_eq!(Ok(StatsQuery::List), "l".parse::<StatsQuery>());
+        assert_eq!(Ok(StatsQuery::UsageCount), "m".parse::<StatsQuery>());
+        assert_eq!(Ok(StatsQuery::Ops), "o".parse::<StatsQuery>());
+        assert_eq!(Ok(StatsQuery::Uptime), "u".parse::<StatsQuery>());
+        assert_eq!(Ok(StatsQuery::Unknown('a')), "a".parse::<StatsQuery>());
+        assert_eq!(Ok(StatsQuery::Unknown('0')), "0".parse::<StatsQuery>());
     }
 
     #[test]
     fn to_string() {
-        assert_eq!(
-            "l".to_string(),
-            String::from(StatsQuery::List)
-        );
-        assert_eq!(
-            "m".to_string(),
-            String::from(StatsQuery::UsageCount)
-        );
-        assert_eq!(
-            "o".to_string(),
-            String::from(StatsQuery::Ops)
-        );
-        assert_eq!(
-            "u".to_string(),
-            String::from(StatsQuery::Uptime)
-        );
-        assert_eq!(
-            "a".to_string(),
-            String::from(StatsQuery::Unknown('a'))
-        );
-        assert_eq!(
-            "0".to_string(),
-            String::from(StatsQuery::Unknown('0'))
-        );
+        assert_eq!("l".to_string(), String::from(StatsQuery::List));
+        assert_eq!("m".to_string(), String::from(StatsQuery::UsageCount));
+        assert_eq!("o".to_string(), String::from(StatsQuery::Ops));
+        assert_eq!("u".to_string(), String::from(StatsQuery::Uptime));
+        assert_eq!("a".to_string(), String::from(StatsQuery::Unknown('a')));
+        assert_eq!("0".to_string(), String::from(StatsQuery::Unknown('0')));
     }
 }
