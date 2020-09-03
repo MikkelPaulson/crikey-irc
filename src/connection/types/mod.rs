@@ -4,7 +4,7 @@ pub use self::keyword_list::KeywordList;
 pub use self::msg_target::{Recipient, Sender};
 pub use self::stats_query::StatsQuery;
 pub use self::target_mask::{HostMask, ServerMask, TargetMask};
-pub use self::user::{Nickname, User};
+pub use self::user::{Nickname, Username};
 
 mod channel;
 mod host;

@@ -1,5 +1,5 @@
 pub use self::message::{Command, Message, MessageBody, Reply, ReplyType};
-pub use self::types::{Nickname, ParseError, Sender, User};
+pub use self::types::{Nickname, ParseError, Sender, Username};
 use std::io;
 use std::io::prelude::*;
 use std::net;

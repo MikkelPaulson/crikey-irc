@@ -1,4 +1,4 @@
-use crate::connection::{Command, Connection, Message, MessageBody, Nickname, ReplyType, User};
+use crate::connection::{Command, Connection, Message, MessageBody, Nickname, ReplyType, Username};
 use std::io;
 use std::net;
 
@@ -77,7 +77,7 @@ impl Client {
 
 pub struct AuthToken {
     pub nickname: Nickname,
-    pub username: User,
+    pub username: Username,
     pub mode: u8,
     pub realname: String,
     pub password: Option<String>,

@@ -9,49 +9,52 @@ use std::str::FromStr;
 ///                 ; any octet except NUL, CR, LF, " " and "@"
 /// ```
 #[derive(Clone, PartialEq, Debug)]
-pub struct User(String);
+pub struct Username(String);
 
-impl FromStr for User {
+impl FromStr for Username {
     type Err = ParseError;
 
     fn from_str(raw: &str) -> Result<Self, Self::Err> {
         if raw.len() < 1 || raw.contains(&['\0', '\r', '\n', ' ', '@'][..]) {
-            Err(ParseError::new("User"))
+            Err(ParseError::new("Username"))
         } else {
-            Ok(User(raw.to_string()))
+            Ok(Username(raw.to_string()))
         }
     }
 }
 
-impl From<User> for String {
-    fn from(user: User) -> String {
-        user.0
+impl From<Username> for String {
+    fn from(username: Username) -> String {
+        username.0
     }
 }
 
 #[cfg(test)]
-mod test_user {
-    use super::User;
+mod test_username {
+    use super::Username;
 
     #[test]
     fn invalid() {
-        assert!("".parse::<User>().is_err());
-        assert!("null\0".parse::<User>().is_err());
-        assert!("carriage\rreturn".parse::<User>().is_err());
-        assert!("line\nfeed".parse::<User>().is_err());
-        assert!(" space".parse::<User>().is_err());
-        assert!("the@sign".parse::<User>().is_err());
+        assert!("".parse::<Username>().is_err());
+        assert!("null\0".parse::<Username>().is_err());
+        assert!("carriage\rreturn".parse::<Username>().is_err());
+        assert!("line\nfeed".parse::<Username>().is_err());
+        assert!(" space".parse::<Username>().is_err());
+        assert!("the@sign".parse::<Username>().is_err());
     }
 
     #[test]
     fn valid() {
-        assert_eq!(Ok(User("a".to_string())), "a".parse::<User>());
-        assert_eq!(Ok(User("potat🥔️".to_string())), "potat🥔️".parse::<User>());
+        assert_eq!(Ok(Username("a".to_string())), "a".parse::<Username>());
+        assert_eq!(
+            Ok(Username("potat🥔️".to_string())),
+            "potat🥔️".parse::<Username>()
+        );
     }
 
     #[test]
     fn into_string() {
-        assert_eq!("a".to_string(), String::from(User("a".to_string())));
+        assert_eq!("a".to_string(), String::from(Username("a".to_string())));
     }
 }
 

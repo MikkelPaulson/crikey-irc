@@ -1,6 +1,6 @@
 use super::super::types::{
     Channel, ChannelKey, KeywordList, Nickname, ParseError, Recipient, Sender, ServerMask,
-    Servername, StatsQuery, TargetMask, User,
+    Servername, StatsQuery, TargetMask, Username,
 };
 use super::MessageParams;
 use std::result::Result;
@@ -16,12 +16,12 @@ pub enum Command {
         nickname: Nickname,
     },
     User {
-        username: User,
+        username: Username,
         mode: u8,
         realname: String,
     },
     Oper {
-        user: User,
+        user: Username,
         password: String,
     },
     UserMode {
@@ -72,7 +72,7 @@ pub enum Command {
     },
     Kick {
         channels: KeywordList<Channel>,
-        users: KeywordList<User>,
+        users: KeywordList<Username>,
         comment: Option<String>,
     },
 
@@ -173,7 +173,7 @@ pub enum Command {
     Die,
     Restart,
     Summon {
-        user: User,
+        user: Username,
         target: Option<Servername>,
         channel: Option<Channel>,
     },

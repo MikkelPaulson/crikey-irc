@@ -1,4 +1,4 @@
-use super::{Channel, Host, Nickname, ParseError, Servername, TargetMask, User};
+use super::{Channel, Host, Nickname, ParseError, Servername, TargetMask, Username};
 use std::result::Result;
 use std::str::FromStr;
 
@@ -53,11 +53,11 @@ use std::str::FromStr;
 pub enum Recipient {
     Channel(Channel),
     Nickname(Nickname),
-    NicknameUserHost(Nickname, User, Host), // nickname!user@host
+    NicknameUserHost(Nickname, Username, Host), // nickname!user@host
     TargetMask(TargetMask),
-    UserHost(User, Host),                       // user%host
-    UserHostServername(User, Host, Servername), // user%host@servername
-    UserServername(User, Servername),           // user@servername
+    UserHost(Username, Host),                       // user%host
+    UserHostServername(Username, Host, Servername), // user%host@servername
+    UserServername(Username, Servername),           // user@servername
 }
 
 impl FromStr for Recipient {
@@ -301,7 +301,7 @@ mod test_recipient {
 pub enum Sender {
     User {
         nickname: Nickname,
-        user: Option<User>,
+        user: Option<Username>,
         host: Option<Host>,
     },
     Server(Servername),
