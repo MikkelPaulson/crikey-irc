@@ -24,6 +24,18 @@ impl FromStr for Host {
     }
 }
 
+impl From<IpAddr> for Host {
+    fn from(ip_addr: IpAddr) -> Host {
+        Host::Hostaddr(ip_addr)
+    }
+}
+
+impl From<Hostname> for Host {
+    fn from(hostname: Hostname) -> Host {
+        Host::Hostname(hostname)
+    }
+}
+
 impl From<Host> for String {
     fn from(host: Host) -> String {
         match host {
@@ -67,6 +79,18 @@ mod test_host {
         assert_eq!(
             Ok(Host::Hostaddr("::1".parse().unwrap())),
             "::1".parse::<Host>()
+        );
+    }
+
+    #[test]
+    fn from_types() {
+        assert_eq!(
+            Host::Hostaddr("127.0.0.1".parse().unwrap()),
+            Host::from("127.0.0.1".parse::<IpAddr>().unwrap())
+        );
+        assert_eq!(
+            Host::Hostname(Hostname("example.com".to_string())),
+            Host::from("example.com".parse::<Hostname>().unwrap())
         );
     }
 

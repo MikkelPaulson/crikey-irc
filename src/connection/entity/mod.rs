@@ -120,6 +120,24 @@ impl FromStr for Recipient {
     }
 }
 
+impl From<Channel> for Recipient {
+    fn from(channel: Channel) -> Recipient {
+        Recipient::Channel(channel)
+    }
+}
+
+impl From<Nickname> for Recipient {
+    fn from(nickname: Nickname) -> Recipient {
+        Recipient::Nickname(nickname)
+    }
+}
+
+impl From<TargetMask> for Recipient {
+    fn from(target_mask: TargetMask) -> Recipient {
+        Recipient::TargetMask(target_mask)
+    }
+}
+
 impl From<Recipient> for String {
     fn from(msg_to: Recipient) -> String {
         match msg_to {
@@ -246,6 +264,22 @@ mod test_recipient {
                 "host".parse().unwrap()
             )),
             "user%host".parse::<Recipient>()
+        );
+    }
+
+    #[test]
+    fn from_types() {
+        assert_eq!(
+            Recipient::Channel("#abc".parse().unwrap()),
+            Recipient::from("#abc".parse::<Channel>().unwrap())
+        );
+        assert_eq!(
+            Recipient::Nickname("bigd1ck".parse().unwrap()),
+            Recipient::from("bigd1ck".parse::<Nickname>().unwrap())
+        );
+        assert_eq!(
+            Recipient::TargetMask("$*.com".parse().unwrap()),
+            Recipient::from("$*.com".parse::<TargetMask>().unwrap())
         );
     }
 
@@ -431,6 +465,62 @@ mod test_sender {
         assert_eq!(
             Ok(Sender::Server("irc.example.com".parse().unwrap())),
             "irc.example.com".parse::<Sender>()
+        );
+    }
+
+    #[test]
+    fn from_types() {
+        assert_eq!(
+            Sender::User {
+                nickname: "bigd1ck".parse().unwrap(),
+                user: None,
+                host: None
+            },
+            Sender::from("bigd1ck".parse::<Nickname>().unwrap())
+        );
+        assert_eq!(
+            Sender::Server("irc.example.com".parse().unwrap()),
+            Sender::from("irc.example.com".parse::<Servername>().unwrap())
+        );
+    }
+
+    #[test]
+    fn into_string() {
+        assert_eq!(
+            "irc.example.com".to_string(),
+            String::from(Sender::Server("irc.example.com".parse().unwrap()))
+        );
+        assert_eq!(
+            "bigd1ck".to_string(),
+            String::from(Sender::User {
+                nickname: "bigd1ck".parse().unwrap(),
+                user: None,
+                host: None
+            })
+        );
+        assert_eq!(
+            "bigd1ck@example.com".to_string(),
+            String::from(Sender::User {
+                nickname: "bigd1ck".parse().unwrap(),
+                user: None,
+                host: Some("example.com".parse().unwrap())
+            })
+        );
+        assert_eq!(
+            "bigd1ck!bradley@example.com".to_string(),
+            String::from(Sender::User {
+                nickname: "bigd1ck".parse().unwrap(),
+                user: Some("bradley".parse().unwrap()),
+                host: Some("example.com".parse().unwrap())
+            })
+        );
+        assert_eq!(
+            "bigd1ck".to_string(),
+            String::from(Sender::User {
+                nickname: "bigd1ck".parse().unwrap(),
+                user: Some("bradley".parse().unwrap()),
+                host: None
+            })
         );
     }
 }
