@@ -1,7 +1,5 @@
-use super::super::entity::{Nickname, Recipient, Sender, Username};
-use super::super::types::{
-    Channel, ChannelKey, KeywordList, ServerMask, Servername, StatsQuery, TargetMask,
-};
+use super::super::entity::{Channel, ChannelKey, Nickname, Recipient, Sender, Username};
+use super::super::types::{KeywordList, ServerMask, Servername, StatsQuery, TargetMask};
 use super::{MessageParams, ParseError};
 use std::result::Result;
 use std::str::FromStr;
