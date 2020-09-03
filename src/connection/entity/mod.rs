@@ -1,4 +1,5 @@
-use super::{Channel, Host, Nickname, ParseError, Servername, TargetMask, Username};
+use super::types::{Channel, Host, Nickname, Servername, TargetMask, Username};
+use super::ParseError;
 use std::result::Result;
 use std::str::FromStr;
 
@@ -143,7 +144,7 @@ impl From<Recipient> for String {
 
 #[cfg(test)]
 mod test_recipient {
-    use super::super::KeywordList;
+    use super::super::types::KeywordList;
     use super::*;
 
     #[test]

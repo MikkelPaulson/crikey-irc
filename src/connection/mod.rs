@@ -1,11 +1,13 @@
+pub use self::entity::Sender;
 pub use self::message::{Command, Message, MessageBody, Reply, ReplyType};
-pub use self::types::{Nickname, Sender, Username};
+pub use self::types::{Nickname, Username};
 use std::error::Error;
 use std::fmt;
 use std::io;
 use std::io::prelude::*;
 use std::net;
 
+mod entity;
 mod message;
 mod types;
 

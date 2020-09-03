@@ -1,6 +1,7 @@
+use super::super::entity::{Recipient, Sender};
 use super::super::types::{
-    Channel, ChannelKey, KeywordList, Nickname, Recipient, Sender, ServerMask, Servername,
-    StatsQuery, TargetMask, Username,
+    Channel, ChannelKey, KeywordList, Nickname, ServerMask, Servername, StatsQuery, TargetMask,
+    Username,
 };
 use super::{MessageParams, ParseError};
 use std::result::Result;
