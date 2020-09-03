@@ -1,7 +1,10 @@
-use super::types::{Channel, Host, Nickname, Servername, TargetMask, Username};
+pub use self::user::{Nickname, Username};
+use super::types::{Channel, Host, Servername, TargetMask};
 use super::ParseError;
 use std::result::Result;
 use std::str::FromStr;
+
+mod user;
 
 /// A single target of a message such as PRIVMSG. This can take many different
 /// forms:

@@ -1,6 +1,5 @@
-pub use self::entity::Sender;
+pub use self::entity::{Nickname, Sender, Username};
 pub use self::message::{Command, Message, MessageBody, Reply, ReplyType};
-pub use self::types::{Nickname, Username};
 use std::error::Error;
 use std::fmt;
 use std::io;
