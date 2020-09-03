@@ -1,5 +1,7 @@
 pub use self::message::{Command, Message, MessageBody, Reply, ReplyType};
-pub use self::types::{Nickname, ParseError, Sender, Username};
+pub use self::types::{Nickname, Sender, Username};
+use std::error::Error;
+use std::fmt;
 use std::io;
 use std::io::prelude::*;
 use std::net;
@@ -59,5 +61,26 @@ impl Connection {
         print!(">> {}", raw_command);
         self.writer.write(raw_command.as_bytes())?;
         Ok(())
+    }
+}
+
+#[derive(PartialEq, Debug)]
+pub struct ParseError(&'static str);
+
+impl ParseError {
+    pub fn new(struct_name: &'static str) -> Self {
+        ParseError(struct_name)
+    }
+}
+
+impl fmt::Display for ParseError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Unable to parse component: {}", self)
+    }
+}
+
+impl Error for ParseError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        None
     }
 }

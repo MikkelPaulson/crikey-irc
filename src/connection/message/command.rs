@@ -1,8 +1,8 @@
 use super::super::types::{
-    Channel, ChannelKey, KeywordList, Nickname, ParseError, Recipient, Sender, ServerMask,
-    Servername, StatsQuery, TargetMask, Username,
+    Channel, ChannelKey, KeywordList, Nickname, Recipient, Sender, ServerMask, Servername,
+    StatsQuery, TargetMask, Username,
 };
-use super::MessageParams;
+use super::{MessageParams, ParseError};
 use std::result::Result;
 use std::str::FromStr;
 

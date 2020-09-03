@@ -5,6 +5,7 @@ pub use self::msg_target::{Recipient, Sender};
 pub use self::stats_query::StatsQuery;
 pub use self::target_mask::{HostMask, ServerMask, TargetMask};
 pub use self::user::{Nickname, Username};
+use super::ParseError;
 
 mod channel;
 mod host;
@@ -13,27 +14,3 @@ mod msg_target;
 mod stats_query;
 mod target_mask;
 mod user;
-
-use std::error::Error;
-use std::fmt;
-
-#[derive(PartialEq, Debug)]
-pub struct ParseError(&'static str);
-
-impl ParseError {
-    pub fn new(struct_name: &'static str) -> Self {
-        ParseError(struct_name)
-    }
-}
-
-impl fmt::Display for ParseError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Unable to parse component: {}", self)
-    }
-}
-
-impl Error for ParseError {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        None
-    }
-}
