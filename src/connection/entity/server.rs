@@ -1,5 +1,5 @@
 use super::ParseError;
-pub use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
+use std::net::IpAddr;
 use std::result::Result;
 use std::str::FromStr;
 

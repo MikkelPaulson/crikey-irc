@@ -1,11 +1,14 @@
 pub use self::channel::{Channel, ChannelKey};
+use self::server::Host;
+pub use self::server::Servername;
 pub use self::user::{Nickname, Username};
-use super::types::{Host, Servername, TargetMask};
+use super::types::TargetMask;
 use super::ParseError;
 use std::result::Result;
 use std::str::FromStr;
 
 mod channel;
+mod server;
 mod user;
 
 /// A single target of a message such as PRIVMSG. This can take many different
