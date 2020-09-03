@@ -2,16 +2,14 @@ pub use self::channel::{Channel, ChannelID, ChannelKey, ChannelName, ChannelType
 pub use self::host::{Host, Hostname, IpAddr, Ipv4Addr, Ipv6Addr, Servername};
 pub use self::keyword_list::KeywordList;
 pub use self::msg_target::{Recipient, Sender};
-pub use self::nickname::Nickname;
 pub use self::stats_query::StatsQuery;
 pub use self::target_mask::{HostMask, ServerMask, TargetMask};
-pub use self::user::User;
+pub use self::user::{Nickname, User};
 
 mod channel;
 mod host;
 mod keyword_list;
 mod msg_target;
-mod nickname;
 mod stats_query;
 mod target_mask;
 mod user;
