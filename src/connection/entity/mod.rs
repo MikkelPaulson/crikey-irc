@@ -2,7 +2,7 @@ pub use self::channel::{Channel, ChannelKey};
 use self::server::Host;
 pub use self::server::Servername;
 pub use self::user::{Nickname, Username};
-use super::types::TargetMask;
+use super::syntax::TargetMask;
 use super::ParseError;
 use std::result::Result;
 use std::str::FromStr;
@@ -152,7 +152,7 @@ impl From<Recipient> for String {
 
 #[cfg(test)]
 mod test_recipient {
-    use super::super::types::KeywordList;
+    use super::super::syntax::KeywordList;
     use super::*;
 
     #[test]

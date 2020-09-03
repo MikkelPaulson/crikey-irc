@@ -8,7 +8,7 @@ use std::net;
 
 mod entity;
 mod message;
-mod types;
+mod syntax;
 
 pub struct Connection {
     reader: Box<dyn io::BufRead>,

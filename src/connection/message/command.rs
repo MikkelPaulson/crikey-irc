@@ -1,7 +1,7 @@
 use super::super::entity::{
     Channel, ChannelKey, Nickname, Recipient, Sender, Servername, Username,
 };
-use super::super::types::{KeywordList, ServerMask, StatsQuery, TargetMask};
+use super::super::syntax::{KeywordList, ServerMask, StatsQuery, TargetMask};
 use super::{MessageParams, ParseError};
 use std::result::Result;
 use std::str::FromStr;

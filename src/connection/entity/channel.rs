@@ -1,4 +1,4 @@
-use super::super::types::ServerMask;
+use super::super::syntax::ServerMask;
 use super::ParseError;
 use std::result::Result;
 use std::str::FromStr;
