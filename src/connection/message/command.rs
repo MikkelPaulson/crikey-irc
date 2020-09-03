@@ -1,6 +1,6 @@
 use super::super::types::{
-    Channel, Key, KeywordList, Nickname, ParseError, Recipient, Sender, ServerMask, Servername,
-    StatsQuery, TargetMask, User,
+    Channel, ChannelKey, KeywordList, Nickname, ParseError, Recipient, Sender, ServerMask,
+    Servername, StatsQuery, TargetMask, User,
 };
 use super::MessageParams;
 use std::result::Result;
@@ -44,7 +44,7 @@ pub enum Command {
     // Channel operations
     Join {
         channels: KeywordList<Channel>,
-        keys: KeywordList<Key>,
+        keys: KeywordList<ChannelKey>,
     },
     Part {
         channels: KeywordList<Channel>,

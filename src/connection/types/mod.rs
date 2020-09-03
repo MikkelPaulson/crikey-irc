@@ -1,6 +1,5 @@
-pub use self::channel::{Channel, ChannelID, ChannelName, ChannelType};
+pub use self::channel::{Channel, ChannelID, ChannelKey, ChannelName, ChannelType};
 pub use self::host::{Host, Hostname, IpAddr, Ipv4Addr, Ipv6Addr, Servername};
-pub use self::key::Key;
 pub use self::keyword_list::KeywordList;
 pub use self::msg_target::{Recipient, Sender};
 pub use self::nickname::Nickname;
@@ -10,7 +9,6 @@ pub use self::user::User;
 
 mod channel;
 mod host;
-mod key;
 mod keyword_list;
 mod msg_target;
 mod nickname;
