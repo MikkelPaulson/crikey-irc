@@ -30,16 +30,12 @@ impl From<User> for String {
 }
 
 #[cfg(test)]
-mod tests {
+mod test_user {
     use super::User;
 
     #[test]
-    fn too_short() {
+    fn invalid() {
         assert!("".parse::<User>().is_err());
-    }
-
-    #[test]
-    fn invalid_chars() {
         assert!("null\0".parse::<User>().is_err());
         assert!("carriage\rreturn".parse::<User>().is_err());
         assert!("line\nfeed".parse::<User>().is_err());
@@ -49,17 +45,8 @@ mod tests {
 
     #[test]
     fn valid() {
-        assert_eq!(
-            User("a".to_string()),
-            "a".parse::<User>()
-                .expect("1-character string should be accepted.")
-        );
-        assert_eq!(
-            User("potat🥔️".to_string()),
-            "potat🥔️"
-                .parse::<User>()
-                .expect("UTF-8 string should be accepted.")
-        );
+        assert_eq!(Ok(User("a".to_string())), "a".parse::<User>());
+        assert_eq!(Ok(User("potat🥔️".to_string())), "potat🥔️".parse::<User>());
     }
 
     #[test]

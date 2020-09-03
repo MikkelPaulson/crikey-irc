@@ -75,6 +75,124 @@ impl From<Channel> for String {
     }
 }
 
+#[cfg(test)]
+mod test_channel {
+    use super::*;
+
+    #[test]
+    fn invalid() {
+        assert!("".parse::<Channel>().is_err());
+        assert!("#".parse::<Channel>().is_err());
+        assert!("+".parse::<Channel>().is_err());
+        assert!("&".parse::<Channel>().is_err());
+        assert!("🥔️".parse::<Channel>().is_err());
+        assert!("!ABCDE".parse::<Channel>().is_err());
+        assert!("!ABCD🥔️".parse::<Channel>().is_err());
+        assert!("noprefix".parse::<Channel>().is_err());
+        assert!("#too:many:colons".parse::<Channel>().is_err());
+        assert!("&new\nline".parse::<Channel>().is_err());
+        assert!("+carriage\rreturn".parse::<Channel>().is_err());
+        assert!("!ABCDEnull\0char".parse::<Channel>().is_err());
+        assert!("#ding\x07dong".parse::<Channel>().is_err());
+        assert!("& space".parse::<Channel>().is_err());
+        assert!("+comma,".parse::<Channel>().is_err());
+        assert!("!12345:colon".parse::<Channel>().is_err());
+        assert!("#01234567890123456789012345678901234567890123456789"
+            .parse::<Channel>()
+            .is_err());
+    }
+
+    #[test]
+    fn valid() {
+        assert_eq!(
+            Ok(Channel {
+                channel_type: ChannelType::Public,
+                channel_name: ChannelName("mypublic".to_string()),
+                server_mask: None,
+            }),
+            "#mypublic".parse::<Channel>()
+        );
+        assert_eq!(
+            Ok(Channel {
+                channel_type: ChannelType::Local,
+                channel_name: ChannelName("my_local".to_string()),
+                server_mask: None,
+            }),
+            "&my_local".parse::<Channel>()
+        );
+        assert_eq!(
+            Ok(Channel {
+                channel_type: ChannelType::NoMode,
+                channel_name: ChannelName("my-no-mode".to_string()),
+                server_mask: Some("*.example.com".parse().unwrap()),
+            }),
+            "+my-no-mode:*.example.com".parse::<Channel>()
+        );
+        assert_eq!(
+            Ok(Channel {
+                channel_type: ChannelType::Safe(ChannelID("ABC12".to_string())),
+                channel_name: ChannelName("3".to_string()),
+                server_mask: None,
+            }),
+            "!ABC123".parse::<Channel>()
+        );
+        assert_eq!(
+            Ok(Channel {
+                channel_type: ChannelType::Public,
+                channel_name: ChannelName(
+                    "0123456789012345678901234567890123456789012345678".to_string()
+                ),
+                server_mask: None,
+            }),
+            "#0123456789012345678901234567890123456789012345678".parse::<Channel>()
+        );
+        assert_eq!(
+            Ok(Channel {
+                channel_type: ChannelType::Local,
+                channel_name: ChannelName("🥔️".to_string()),
+                server_mask: None,
+            }),
+            "&🥔️".parse::<Channel>()
+        );
+    }
+
+    #[test]
+    fn into_string() {
+        assert_eq!(
+            "#mychan".to_string(),
+            String::from(Channel {
+                channel_name: ChannelName("mychan".to_string()),
+                channel_type: ChannelType::Public,
+                server_mask: None,
+            })
+        );
+        assert_eq!(
+            "&localchan".to_string(),
+            String::from(Channel {
+                channel_name: ChannelName("localchan".to_string()),
+                channel_type: ChannelType::Local,
+                server_mask: None,
+            })
+        );
+        assert_eq!(
+            "+nomode:example.com".to_string(),
+            String::from(Channel {
+                channel_name: ChannelName("nomode".to_string()),
+                channel_type: ChannelType::NoMode,
+                server_mask: Some("example.com".parse().unwrap()),
+            })
+        );
+        assert_eq!(
+            "!12345safemode".to_string(),
+            String::from(Channel {
+                channel_name: ChannelName("safemode".to_string()),
+                channel_type: ChannelType::Safe(ChannelID("12345".to_string())),
+                server_mask: None,
+            })
+        )
+    }
+}
+
 /// The type of a channel, also referred to as its namespace.
 ///
 /// - `#` is public, shared among all servers on a network.
@@ -125,6 +243,43 @@ impl From<ChannelType> for String {
     }
 }
 
+#[cfg(test)]
+mod test_channel_type {
+    use super::*;
+
+    #[test]
+    fn invalid() {
+        assert!("".parse::<ChannelType>().is_err());
+        assert!("#a".parse::<ChannelType>().is_err());
+        assert!("*".parse::<ChannelType>().is_err());
+        assert!("🥔️".parse::<ChannelType>().is_err());
+        assert!("#ABCDE".parse::<ChannelType>().is_err());
+        assert!("!ABCD🥔️".parse::<ChannelType>().is_err());
+    }
+
+    #[test]
+    fn valid() {
+        assert_eq!(Ok(ChannelType::Public), "#".parse::<ChannelType>());
+        assert_eq!(Ok(ChannelType::Local), "&".parse::<ChannelType>());
+        assert_eq!(Ok(ChannelType::NoMode), "+".parse::<ChannelType>());
+        assert_eq!(
+            Ok(ChannelType::Safe(ChannelID("123YZ".to_string()))),
+            "!123YZ".parse::<ChannelType>()
+        );
+    }
+
+    #[test]
+    fn into_string() {
+        assert_eq!("#".to_string(), String::from(ChannelType::Public));
+        assert_eq!("&".to_string(), String::from(ChannelType::Local));
+        assert_eq!("+".to_string(), String::from(ChannelType::NoMode));
+        assert_eq!(
+            "!12345".to_string(),
+            String::from(ChannelType::Safe(ChannelID("12345".to_string())))
+        );
+    }
+}
+
 /// The 5-digit ID attached to a "safe" channel name.
 ///
 /// ```text
@@ -170,6 +325,42 @@ impl From<ChannelID> for String {
     }
 }
 
+#[cfg(test)]
+mod test_channel_id {
+    use super::*;
+
+    #[test]
+    fn invalid() {
+        assert!("".parse::<ChannelID>().is_err());
+        assert!("1234".parse::<ChannelType>().is_err());
+        assert!("123456".parse::<ChannelType>().is_err());
+        assert!("🥔️".parse::<ChannelType>().is_err());
+        assert!("1234🥔️".parse::<ChannelType>().is_err());
+        assert!("!ABCDE️".parse::<ChannelType>().is_err());
+        assert!("abcde️".parse::<ChannelType>().is_err());
+    }
+
+    #[test]
+    fn valid() {
+        assert_eq!(
+            Ok(ChannelID("12345".to_string())),
+            "12345".parse::<ChannelID>()
+        );
+        assert_eq!(
+            Ok(ChannelID("ABXYZ".to_string())),
+            "ABXYZ".parse::<ChannelID>()
+        );
+    }
+
+    #[test]
+    fn into_string() {
+        assert_eq!(
+            "VWXYZ".to_string(),
+            String::from(ChannelID("VWXYZ".to_string())),
+        );
+    }
+}
+
 /// The name/"chanstring" part of a channel identifier.
 ///
 /// ```text
@@ -199,166 +390,11 @@ impl From<ChannelName> for String {
 }
 
 #[cfg(test)]
-mod tests {
+mod test_channel_name {
     use super::*;
 
     #[test]
-    fn invalid_channel() {
-        assert!("".parse::<Channel>().is_err());
-        assert!("#".parse::<Channel>().is_err());
-        assert!("+".parse::<Channel>().is_err());
-        assert!("&".parse::<Channel>().is_err());
-        assert!("🥔️".parse::<Channel>().is_err());
-        assert!("!ABCDE".parse::<Channel>().is_err());
-        assert!("!ABCD🥔️".parse::<Channel>().is_err());
-        assert!("noprefix".parse::<Channel>().is_err());
-        assert!("#too:many:colons".parse::<Channel>().is_err());
-        assert!("&new\nline".parse::<Channel>().is_err());
-        assert!("+carriage\rreturn".parse::<Channel>().is_err());
-        assert!("!ABCDEnull\0char".parse::<Channel>().is_err());
-        assert!("#ding\x07dong".parse::<Channel>().is_err());
-        assert!("& space".parse::<Channel>().is_err());
-        assert!("+comma,".parse::<Channel>().is_err());
-        assert!("!12345:colon".parse::<Channel>().is_err());
-        assert!("#01234567890123456789012345678901234567890123456789"
-            .parse::<Channel>()
-            .is_err());
-    }
-
-    #[test]
-    fn valid_channel() {
-        assert_eq!(
-            Channel {
-                channel_type: ChannelType::Public,
-                channel_name: ChannelName("mypublic".to_string()),
-                server_mask: None,
-            },
-            "#mypublic"
-                .parse::<Channel>()
-                .expect("#mypublic should be valid")
-        );
-        assert_eq!(
-            Channel {
-                channel_type: ChannelType::Local,
-                channel_name: ChannelName("my_local".to_string()),
-                server_mask: None,
-            },
-            "&my_local"
-                .parse::<Channel>()
-                .expect("&my_local should be valid")
-        );
-        assert_eq!(
-            Channel {
-                channel_type: ChannelType::NoMode,
-                channel_name: ChannelName("my-no-mode".to_string()),
-                server_mask: Some(
-                    "*.example.com"
-                        .parse()
-                        .expect("Unable to parse server mask")
-                ),
-            },
-            "+my-no-mode:*.example.com"
-                .parse::<Channel>()
-                .expect("+my-no-mode:*.example.com should be valid")
-        );
-        assert_eq!(
-            Channel {
-                channel_type: ChannelType::Safe(ChannelID("ABC12".to_string())),
-                channel_name: ChannelName("3".to_string()),
-                server_mask: None,
-            },
-            "!ABC123"
-                .parse::<Channel>()
-                .expect("!ABC123 should be valid")
-        );
-        assert_eq!(
-            Channel {
-                channel_type: ChannelType::Public,
-                channel_name: ChannelName(
-                    "0123456789012345678901234567890123456789012345678".to_string()
-                ),
-                server_mask: None,
-            },
-            "#0123456789012345678901234567890123456789012345678"
-                .parse::<Channel>()
-                .expect("A 50-char channel name should be valid")
-        );
-        assert_eq!(
-            Channel {
-                channel_type: ChannelType::Local,
-                channel_name: ChannelName("🥔️".to_string()),
-                server_mask: None,
-            },
-            "&🥔️"
-                .parse::<Channel>()
-                .expect("A UTF-8 channel name should be valid")
-        );
-    }
-
-    #[test]
-    fn invalid_channel_type() {
-        assert!("".parse::<ChannelType>().is_err());
-        assert!("#a".parse::<ChannelType>().is_err());
-        assert!("*".parse::<ChannelType>().is_err());
-        assert!("🥔️".parse::<ChannelType>().is_err());
-        assert!("#ABCDE".parse::<ChannelType>().is_err());
-        assert!("!ABCD🥔️".parse::<ChannelType>().is_err());
-    }
-
-    #[test]
-    fn valid_channel_type() {
-        assert_eq!(
-            ChannelType::Public,
-            "#".parse::<ChannelType>()
-                .expect("The # character should be valid")
-        );
-        assert_eq!(
-            ChannelType::Local,
-            "&".parse::<ChannelType>()
-                .expect("The & character should be valid")
-        );
-        assert_eq!(
-            ChannelType::NoMode,
-            "+".parse::<ChannelType>()
-                .expect("The + character should be valid")
-        );
-        assert_eq!(
-            ChannelType::Safe(ChannelID("123YZ".to_string())),
-            "!123YZ"
-                .parse::<ChannelType>()
-                .expect("The ! character should be valid when followed by 5 chars")
-        );
-    }
-
-    #[test]
-    fn invalid_channel_id() {
-        assert!("".parse::<ChannelID>().is_err());
-        assert!("1234".parse::<ChannelType>().is_err());
-        assert!("123456".parse::<ChannelType>().is_err());
-        assert!("🥔️".parse::<ChannelType>().is_err());
-        assert!("1234🥔️".parse::<ChannelType>().is_err());
-        assert!("!ABCDE️".parse::<ChannelType>().is_err());
-        assert!("abcde️".parse::<ChannelType>().is_err());
-    }
-
-    #[test]
-    fn valid_channel_id() {
-        assert_eq!(
-            ChannelID("12345".to_string()),
-            "12345"
-                .parse::<ChannelID>()
-                .expect("A numeric channel ID should be valid")
-        );
-        assert_eq!(
-            ChannelID("ABXYZ".to_string()),
-            "ABXYZ"
-                .parse::<ChannelID>()
-                .expect("An uppercase channel ID should be valid")
-        );
-    }
-
-    #[test]
-    fn invalid_channel_name() {
+    fn invalid() {
         assert!("".parse::<ChannelName>().is_err());
         assert!("new\nline".parse::<ChannelName>().is_err());
         assert!("carriage\rreturn".parse::<ChannelName>().is_err());
@@ -370,28 +406,19 @@ mod tests {
     }
 
     #[test]
-    fn valid_channel_name() {
+    fn valid() {
         assert_eq!(
-            ChannelName("mychannel".to_string()),
-            "mychannel"
-                .parse::<ChannelName>()
-                .expect("\"mychannel\" should be a valid channel name")
+            Ok(ChannelName("mychannel".to_string())),
+            "mychannel".parse::<ChannelName>()
+        );
+        assert_eq!(Ok(ChannelName("#".to_string())), "#".parse::<ChannelName>());
+        assert_eq!(
+            Ok(ChannelName("🥔️".to_string())),
+            "🥔️".parse::<ChannelName>()
         );
         assert_eq!(
-            ChannelName("#".to_string()),
-            "#".parse::<ChannelName>()
-                .expect("\"#\" should be a valid channel name")
-        );
-        assert_eq!(
-            ChannelName("🥔️".to_string()),
-            "🥔️"
-                .parse::<ChannelName>()
-                .expect("\"🥔️\" should be a valid channel name")
-        );
-        assert_eq!(
-            ChannelName("\"".to_string()),
+            Ok(ChannelName("\"".to_string())),
             "\"".parse::<ChannelName>()
-                .expect("\"\\\"️\" should be a valid channel name")
         );
     }
 
@@ -401,51 +428,6 @@ mod tests {
             "mychan".to_string(),
             String::from(ChannelName("mychan".to_string())),
         );
-        assert_eq!(
-            "VWXYZ".to_string(),
-            String::from(ChannelID("VWXYZ".to_string())),
-        );
-
-        assert_eq!("#".to_string(), String::from(ChannelType::Public));
-        assert_eq!("&".to_string(), String::from(ChannelType::Local));
-        assert_eq!("+".to_string(), String::from(ChannelType::NoMode));
-        assert_eq!(
-            "!12345".to_string(),
-            String::from(ChannelType::Safe(ChannelID("12345".to_string())))
-        );
-
-        assert_eq!(
-            "#mychan".to_string(),
-            String::from(Channel {
-                channel_name: ChannelName("mychan".to_string()),
-                channel_type: ChannelType::Public,
-                server_mask: None,
-            })
-        );
-        assert_eq!(
-            "&localchan".to_string(),
-            String::from(Channel {
-                channel_name: ChannelName("localchan".to_string()),
-                channel_type: ChannelType::Local,
-                server_mask: None,
-            })
-        );
-        assert_eq!(
-            "+nomode:example.com".to_string(),
-            String::from(Channel {
-                channel_name: ChannelName("nomode".to_string()),
-                channel_type: ChannelType::NoMode,
-                server_mask: Some("example.com".parse().unwrap()),
-            })
-        );
-        assert_eq!(
-            "!12345safemode".to_string(),
-            String::from(Channel {
-                channel_name: ChannelName("safemode".to_string()),
-                channel_type: ChannelType::Safe(ChannelID("12345".to_string())),
-                server_mask: None,
-            })
-        )
     }
 }
 
@@ -490,13 +472,9 @@ mod test_channel_key {
     use super::*;
 
     #[test]
-    fn wrong_length() {
+    fn invalid() {
         assert!("".parse::<ChannelKey>().is_err());
         assert!("abcdefghijklmnopqrstuvwx".parse::<ChannelKey>().is_err());
-    }
-
-    #[test]
-    fn invalid_characters() {
         assert!("null\0".parse::<ChannelKey>().is_err());
         assert!("carriage\rreturn".parse::<ChannelKey>().is_err());
         assert!("line\nfeed".parse::<ChannelKey>().is_err());
@@ -508,18 +486,12 @@ mod test_channel_key {
     }
 
     #[test]
-    fn success() {
-        assert_eq!(
-            ChannelKey("a".to_string()),
-            "a".parse::<ChannelKey>()
-                .expect("1-character string should be accepted.")
-        );
+    fn valid() {
+        assert_eq!(Ok(ChannelKey("a".to_string())), "a".parse::<ChannelKey>());
 
         assert_eq!(
-            ChannelKey("0123456789abcdeABCDE~!#".to_string()),
-            "0123456789abcdeABCDE~!#"
-                .parse::<ChannelKey>()
-                .expect("23-character string should be accepted.")
+            Ok(ChannelKey("0123456789abcdeABCDE~!#".to_string())),
+            "0123456789abcdeABCDE~!#".parse::<ChannelKey>()
         );
     }
 

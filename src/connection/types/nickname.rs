@@ -49,21 +49,13 @@ impl From<Nickname> for String {
 }
 
 #[cfg(test)]
-mod tests {
+mod test_nickname {
     use super::Nickname;
 
     #[test]
-    fn too_short() {
+    fn invalid() {
         assert!("".parse::<Nickname>().is_err());
-    }
-
-    #[test]
-    fn not_ascii() {
         assert!("potat🥔️".parse::<Nickname>().is_err());
-    }
-
-    #[test]
-    fn invalid_chars() {
         assert!("2hot4u".parse::<Nickname>().is_err());
         //assert!("nickn@me".parse::<Nickname>().is_err());
         assert!("-minus".parse::<Nickname>().is_err());
@@ -73,76 +65,50 @@ mod tests {
 
     #[test]
     fn valid() {
+        assert_eq!(Ok(Nickname("a".to_string())), "a".parse::<Nickname>());
         assert_eq!(
-            Nickname("a".to_string()),
-            "a".parse::<Nickname>()
-                .expect("Single-character nickname should be accepted.")
+            Ok(Nickname("n-name".to_string())),
+            "n-name".parse::<Nickname>()
         );
         assert_eq!(
-            Nickname("n-name".to_string()),
-            "n-name"
-                .parse::<Nickname>()
-                .expect("Hyphen after the first character should be accepted.")
+            Ok(Nickname("I2hot4u".to_string())),
+            "I2hot4u".parse::<Nickname>()
         );
         assert_eq!(
-            Nickname("I2hot4u".to_string()),
-            "I2hot4u"
-                .parse::<Nickname>()
-                .expect("Numerals after first character should be accepted.")
+            Ok(Nickname("ABCDEFGHI".to_string())),
+            "ABCDEFGHI".parse::<Nickname>()
         );
         assert_eq!(
-            Nickname("ABCDEFGHI".to_string()),
-            "ABCDEFGHI"
-                .parse::<Nickname>()
-                .expect("Uppercase characters should be accepted.")
+            Ok(Nickname("JKLMNOPQR".to_string())),
+            "JKLMNOPQR".parse::<Nickname>()
         );
         assert_eq!(
-            Nickname("JKLMNOPQR".to_string()),
-            "JKLMNOPQR"
-                .parse::<Nickname>()
-                .expect("Uppercase characters should be accepted.")
+            Ok(Nickname("STUVWXYZ0".to_string())),
+            "STUVWXYZ0".parse::<Nickname>()
         );
         assert_eq!(
-            Nickname("STUVWXYZ0".to_string()),
-            "STUVWXYZ0"
-                .parse::<Nickname>()
-                .expect("Uppercase characters and numerals should be accepted.")
+            Ok(Nickname("abcdefghi".to_string())),
+            "abcdefghi".parse::<Nickname>()
         );
         assert_eq!(
-            Nickname("abcdefghi".to_string()),
-            "abcdefghi"
-                .parse::<Nickname>()
-                .expect("Lowercase characters should be accepted.")
+            Ok(Nickname("jklmnopqr".to_string())),
+            "jklmnopqr".parse::<Nickname>()
         );
         assert_eq!(
-            Nickname("jklmnopqr".to_string()),
-            "jklmnopqr"
-                .parse::<Nickname>()
-                .expect("Lowercase characters should be accepted.")
+            Ok(Nickname("stuvwxyz1".to_string())),
+            "stuvwxyz1".parse::<Nickname>()
         );
         assert_eq!(
-            Nickname("stuvwxyz1".to_string()),
-            "stuvwxyz1"
-                .parse::<Nickname>()
-                .expect("Lowercase characters and numerals should be accepted.")
+            Ok(Nickname("x23456789".to_string())),
+            "x23456789".parse::<Nickname>()
         );
         assert_eq!(
-            Nickname("x23456789".to_string()),
-            "x23456789"
-                .parse::<Nickname>()
-                .expect("Numerals should be accepted.")
+            Ok(Nickname("[]\\`_^{|}".to_string())),
+            "[]\\`_^{|}".parse::<Nickname>()
         );
         assert_eq!(
-            Nickname("[]\\`_^{|}".to_string()),
-            "[]\\`_^{|}"
-                .parse::<Nickname>()
-                .expect("Special characters should be accepted.")
-        );
-        assert_eq!(
-            Nickname("abcdefghijklmnopqrstuvwxyz".to_string()),
-            "abcdefghijklmnopqrstuvwxyz"
-                .parse::<Nickname>()
-                .expect("Strings longer than 9 characters should be accepted.")
+            Ok(Nickname("abcdefghijklmnopqrstuvwxyz".to_string())),
+            "abcdefghijklmnopqrstuvwxyz".parse::<Nickname>()
         );
     }
 
