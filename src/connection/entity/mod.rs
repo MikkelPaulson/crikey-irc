@@ -1,6 +1,15 @@
-use super::{Channel, Host, Nickname, ParseError, Servername, TargetMask, User};
+pub use self::channel::{Channel, ChannelKey};
+use self::server::Host;
+pub use self::server::Servername;
+pub use self::user::{Nickname, Username};
+use super::syntax::TargetMask;
+use super::ParseError;
 use std::result::Result;
 use std::str::FromStr;
+
+mod channel;
+mod server;
+mod user;
 
 /// A single target of a message such as PRIVMSG. This can take many different
 /// forms:
@@ -53,11 +62,11 @@ use std::str::FromStr;
 pub enum Recipient {
     Channel(Channel),
     Nickname(Nickname),
-    NicknameUserHost(Nickname, User, Host), // nickname!user@host
+    NicknameUserHost(Nickname, Username, Host), // nickname!user@host
     TargetMask(TargetMask),
-    UserHost(User, Host),                       // user%host
-    UserHostServername(User, Host, Servername), // user%host@servername
-    UserServername(User, Servername),           // user@servername
+    UserHost(Username, Host),                       // user%host
+    UserHostServername(Username, Host, Servername), // user%host@servername
+    UserServername(Username, Servername),           // user@servername
 }
 
 impl FromStr for Recipient {
@@ -111,6 +120,24 @@ impl FromStr for Recipient {
     }
 }
 
+impl From<Channel> for Recipient {
+    fn from(channel: Channel) -> Recipient {
+        Recipient::Channel(channel)
+    }
+}
+
+impl From<Nickname> for Recipient {
+    fn from(nickname: Nickname) -> Recipient {
+        Recipient::Nickname(nickname)
+    }
+}
+
+impl From<TargetMask> for Recipient {
+    fn from(target_mask: TargetMask) -> Recipient {
+        Recipient::TargetMask(target_mask)
+    }
+}
+
 impl From<Recipient> for String {
     fn from(msg_to: Recipient) -> String {
         match msg_to {
@@ -143,7 +170,7 @@ impl From<Recipient> for String {
 
 #[cfg(test)]
 mod test_recipient {
-    use super::super::KeywordList;
+    use super::super::syntax::KeywordList;
     use super::*;
 
     #[test]
@@ -241,6 +268,22 @@ mod test_recipient {
     }
 
     #[test]
+    fn from_types() {
+        assert_eq!(
+            Recipient::Channel("#abc".parse().unwrap()),
+            Recipient::from("#abc".parse::<Channel>().unwrap())
+        );
+        assert_eq!(
+            Recipient::Nickname("bigd1ck".parse().unwrap()),
+            Recipient::from("bigd1ck".parse::<Nickname>().unwrap())
+        );
+        assert_eq!(
+            Recipient::TargetMask("$*.com".parse().unwrap()),
+            Recipient::from("$*.com".parse::<TargetMask>().unwrap())
+        );
+    }
+
+    #[test]
     fn into_string() {
         assert_eq!(
             "#mychan".to_string(),
@@ -301,7 +344,7 @@ mod test_recipient {
 pub enum Sender {
     User {
         nickname: Nickname,
-        user: Option<User>,
+        user: Option<Username>,
         host: Option<Host>,
     },
     Server(Servername),
@@ -422,6 +465,62 @@ mod test_sender {
         assert_eq!(
             Ok(Sender::Server("irc.example.com".parse().unwrap())),
             "irc.example.com".parse::<Sender>()
+        );
+    }
+
+    #[test]
+    fn from_types() {
+        assert_eq!(
+            Sender::User {
+                nickname: "bigd1ck".parse().unwrap(),
+                user: None,
+                host: None
+            },
+            Sender::from("bigd1ck".parse::<Nickname>().unwrap())
+        );
+        assert_eq!(
+            Sender::Server("irc.example.com".parse().unwrap()),
+            Sender::from("irc.example.com".parse::<Servername>().unwrap())
+        );
+    }
+
+    #[test]
+    fn into_string() {
+        assert_eq!(
+            "irc.example.com".to_string(),
+            String::from(Sender::Server("irc.example.com".parse().unwrap()))
+        );
+        assert_eq!(
+            "bigd1ck".to_string(),
+            String::from(Sender::User {
+                nickname: "bigd1ck".parse().unwrap(),
+                user: None,
+                host: None
+            })
+        );
+        assert_eq!(
+            "bigd1ck@example.com".to_string(),
+            String::from(Sender::User {
+                nickname: "bigd1ck".parse().unwrap(),
+                user: None,
+                host: Some("example.com".parse().unwrap())
+            })
+        );
+        assert_eq!(
+            "bigd1ck!bradley@example.com".to_string(),
+            String::from(Sender::User {
+                nickname: "bigd1ck".parse().unwrap(),
+                user: Some("bradley".parse().unwrap()),
+                host: Some("example.com".parse().unwrap())
+            })
+        );
+        assert_eq!(
+            "bigd1ck".to_string(),
+            String::from(Sender::User {
+                nickname: "bigd1ck".parse().unwrap(),
+                user: Some("bradley".parse().unwrap()),
+                host: None
+            })
         );
     }
 }

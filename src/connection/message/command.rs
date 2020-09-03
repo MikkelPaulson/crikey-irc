@@ -1,7 +1,8 @@
-use super::{
-    Channel, CommandArgs, Key, KeywordList, Nickname, ParseError, Recipient, Sender, ServerMask,
-    Servername, StatsQuery, TargetMask, User,
+use super::super::entity::{
+    Channel, ChannelKey, Nickname, Recipient, Sender, Servername, Username,
 };
+use super::super::syntax::{KeywordList, ServerMask, StatsQuery, TargetMask};
+use super::{MessageParams, ParseError};
 use std::result::Result;
 use std::str::FromStr;
 
@@ -15,12 +16,12 @@ pub enum Command {
         nickname: Nickname,
     },
     User {
-        username: User,
+        username: Username,
         mode: u8,
         realname: String,
     },
     Oper {
-        user: User,
+        user: Username,
         password: String,
     },
     UserMode {
@@ -43,7 +44,7 @@ pub enum Command {
     // Channel operations
     Join {
         channels: KeywordList<Channel>,
-        keys: KeywordList<Key>,
+        keys: KeywordList<ChannelKey>,
     },
     Part {
         channels: KeywordList<Channel>,
@@ -71,7 +72,7 @@ pub enum Command {
     },
     Kick {
         channels: KeywordList<Channel>,
-        users: KeywordList<User>,
+        users: KeywordList<Username>,
         comment: Option<String>,
     },
 
@@ -172,7 +173,7 @@ pub enum Command {
     Die,
     Restart,
     Summon {
-        user: User,
+        user: Username,
         target: Option<Servername>,
         channel: Option<Channel>,
     },
@@ -201,7 +202,7 @@ impl FromStr for Command {
             (raw, "")
         };
 
-        let args = raw_args.parse::<CommandArgs>()?;
+        let args = raw_args.parse::<MessageParams>()?;
 
         match (raw_command, args.len()) {
             ("PASS", 1) => Ok(Command::Pass {

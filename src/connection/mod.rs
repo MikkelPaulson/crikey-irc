@@ -1,9 +1,14 @@
-pub use self::types::{Command, Message, MessageBody, Nickname, Reply, ReplyType, User};
+pub use self::entity::{Nickname, Sender, Username};
+pub use self::message::{Command, Message, MessageBody, Reply, ReplyType};
+use std::error::Error;
+use std::fmt;
 use std::io;
 use std::io::prelude::*;
 use std::net;
 
-mod types;
+mod entity;
+mod message;
+mod syntax;
 
 pub struct Connection {
     reader: Box<dyn io::BufRead>,
@@ -57,5 +62,26 @@ impl Connection {
         print!(">> {}", raw_command);
         self.writer.write(raw_command.as_bytes())?;
         Ok(())
+    }
+}
+
+#[derive(PartialEq, Debug)]
+pub struct ParseError(&'static str);
+
+impl ParseError {
+    pub fn new(struct_name: &'static str) -> Self {
+        ParseError(struct_name)
+    }
+}
+
+impl fmt::Display for ParseError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Unable to parse component: {}", self)
+    }
+}
+
+impl Error for ParseError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        None
     }
 }
