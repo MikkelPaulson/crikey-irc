@@ -15,7 +15,7 @@ use std::str::FromStr;
 /// Note that this notation limits nicknames to 9 characters, but the RFC
 /// elsewhere recommends supporting longer nicknames for forwards compatibility.
 /// We currently enforce no upper bound.
-#[derive(PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct Nickname(String);
 
 impl FromStr for Nickname {

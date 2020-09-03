@@ -8,7 +8,7 @@ use std::str::FromStr;
 /// user       =  1*( %x01-09 / %x0B-0C / %x0E-1F / %x21-3F / %x41-FF )
 ///                 ; any octet except NUL, CR, LF, " " and "@"
 /// ```
-#[derive(PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct User(String);
 
 impl FromStr for User {

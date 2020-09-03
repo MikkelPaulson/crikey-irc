@@ -1,11 +1,8 @@
-pub use self::command::Command;
-pub use self::reply::ReplyType;
+pub use self::types::{Command, Message, MessageBody, Nickname, Reply, ReplyType, User};
 use std::io;
 use std::io::prelude::*;
 use std::net;
 
-mod command;
-mod reply;
 mod types;
 
 pub struct Connection {
@@ -32,19 +29,16 @@ impl Connection {
                 if len == 0 {
                     panic!("Stream disconnected");
                 } else {
-                    // Truncate at the first control character (ie. CR/LF)
-                    buffer.truncate(buffer.find(char::is_control).unwrap_or(buffer.len()));
-                    split_server_name(&mut buffer);
-
-                    if let Some(command) = command::from_raw(&buffer) {
-                        println!("\x1B[94m<C {:?}\x1B[0m", command);
-                        Some(Message::Command(command))
-                    } else if let Some((reply_type, reply_body)) = reply::from_raw(&buffer) {
-                        println!("\x1B[92m<R {:?} {:?}\x1B[0m", reply_type, reply_body);
-                        Some(Message::Reply(reply_type, reply_body))
-                    } else {
-                        println!("\x1B[91m<? {}\x1B[0m", buffer);
-                        None
+                    match buffer.parse::<Message>() {
+                        Ok(message) => {
+                            println!("\x1B[94m<< {:?}\x1B[0m", message);
+                            Some(message)
+                        }
+                        Err(e) => {
+                            print!("\x1B[91m<? {}\x1B[0m", buffer);
+                            println!("\x1B[91m   {:?}\x1B[0m", e);
+                            None
+                        }
                     }
                 }
             }
@@ -54,7 +48,7 @@ impl Connection {
     }
 
     pub fn send_command(&mut self, command: Command) -> std::io::Result<()> {
-        let raw_command = command::to_raw(command);
+        let raw_command = String::from(command);
         self.send_command_raw(raw_command)
     }
 
@@ -63,76 +57,5 @@ impl Connection {
         print!(">> {}", raw_command);
         self.writer.write(raw_command.as_bytes())?;
         Ok(())
-    }
-}
-
-pub enum Message {
-    Command(Command),
-    Reply(ReplyType, String),
-}
-
-fn split_server_name(raw_message: &mut String) -> Option<String> {
-    if raw_message.starts_with(':') {
-        let slice_index = raw_message.find(' ')?;
-        let server_name = raw_message[1..slice_index].to_string();
-        raw_message.replace_range(..slice_index + 1, "");
-        Some(server_name)
-    } else {
-        None
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn split_server_name_with_name() {
-        let mut command =
-            ":irc.example.net 001 foo :Welcome to the Internet Relay Network".to_string();
-        let result = split_server_name(&mut command);
-
-        assert_eq!("001 foo :Welcome to the Internet Relay Network", command);
-        assert_eq!(Some("irc.example.net".to_string()), result);
-    }
-
-    #[test]
-    fn split_server_name_no_name() {
-        let mut command = "001 foo :Welcome to the Internet Relay Network".to_string();
-        let result = split_server_name(&mut command);
-
-        assert_eq!("001 foo :Welcome to the Internet Relay Network", command);
-        assert_eq!(None, result);
-    }
-
-    #[test]
-    fn split_server_name_missing_colon() {
-        let mut command =
-            "irc.example.net 001 foo :Welcome to the Internet Relay Network".to_string();
-        let result = split_server_name(&mut command);
-
-        assert_eq!(
-            "irc.example.net 001 foo :Welcome to the Internet Relay Network",
-            command
-        );
-        assert_eq!(None, result);
-    }
-
-    #[test]
-    fn split_server_name_server_only() {
-        let mut command = ":irc.example.net".to_string();
-        let result = split_server_name(&mut command);
-
-        assert_eq!(":irc.example.net", command);
-        assert_eq!(None, result);
-    }
-
-    #[test]
-    fn split_server_name_trailing_space() {
-        let mut command = ":irc.example.net ".to_string();
-        let result = split_server_name(&mut command);
-
-        assert_eq!("", command);
-        assert_eq!(Some("irc.example.net".to_string()), result);
     }
 }

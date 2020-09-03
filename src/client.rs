@@ -1,4 +1,4 @@
-use crate::connection::{self, Command, Connection, ReplyType};
+use crate::connection::{Command, Connection, Message, MessageBody, Nickname, ReplyType, User};
 use std::io;
 use std::net;
 
@@ -37,10 +37,14 @@ impl Client {
 
     pub fn poll(&mut self) -> bool {
         match self.connection.poll() {
-            Some(connection::Message::Command(command)) => self.handle_command(command),
-            Some(connection::Message::Reply(reply_type, reply_body)) => {
-                self.handle_reply(reply_type, reply_body)
-            }
+            Some(Message {
+                body: MessageBody::Command(command),
+                ..
+            }) => self.handle_command(command),
+            Some(Message {
+                body: MessageBody::Reply(reply_type, reply_body),
+                ..
+            }) => self.handle_reply(reply_type, reply_body),
             None => return false,
         }
         true
@@ -58,7 +62,7 @@ impl Client {
             self.connection
                 .send_command(Command::Pong {
                     to: from,
-                    from: self.auth_token.nickname.to_owned(),
+                    from: self.auth_token.nickname.clone().into(),
                 })
                 .ok();
         }
@@ -72,8 +76,8 @@ impl Client {
 }
 
 pub struct AuthToken {
-    pub nickname: String,
-    pub username: String,
+    pub nickname: Nickname,
+    pub username: User,
     pub mode: u8,
     pub realname: String,
     pub password: Option<String>,
@@ -83,7 +87,7 @@ impl AuthToken {
     fn pass(&self) -> Option<Command> {
         match &self.password {
             Some(password) => Some(Command::Pass {
-                password: password.to_owned(),
+                password: password.clone(),
             }),
             None => None,
         }
@@ -91,16 +95,15 @@ impl AuthToken {
 
     fn nick(&self) -> Command {
         Command::Nick {
-            nickname: self.nickname.to_owned(),
-            hopcount: None,
+            nickname: self.nickname.clone(),
         }
     }
 
     fn user(&self) -> Command {
         Command::User {
-            username: self.username.to_owned(),
+            username: self.username.clone(),
             mode: self.mode,
-            realname: self.realname.to_owned(),
+            realname: self.realname.clone(),
         }
     }
 }

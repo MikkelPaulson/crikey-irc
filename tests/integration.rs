@@ -16,10 +16,7 @@ fn it_authenticates() {
 fn it_responds_to_ping() {
     let (_client, mut server) = common::connect("127.0.0.1:16668");
 
-    server.write_line("PING :irc.example.com");
+    server.write_line("PING");
 
-    assert_eq!(
-        "PONG spudly irc.example.com",
-        server.read_line().expect("Nothing to read.")
-    );
+    assert_eq!("PONG spudly", server.read_line().expect("Nothing to read."));
 }
