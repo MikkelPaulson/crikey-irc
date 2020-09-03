@@ -1,8 +1,10 @@
-pub use self::types::{Command, Message, MessageBody, Nickname, Reply, ReplyType, User};
+pub use self::message::{Command, Message, MessageBody, Reply, ReplyType};
+pub use self::types::{Nickname, ParseError, Sender, User};
 use std::io;
 use std::io::prelude::*;
 use std::net;
 
+mod message;
 mod types;
 
 pub struct Connection {

@@ -1,9 +1,14 @@
-use super::{Command, ParseError, ReplyType, Sender};
+pub use self::command::Command;
+pub use self::reply::{Reply, ReplyType};
+use super::{ParseError, Sender};
 use std::iter::IntoIterator;
 use std::ops::Index;
 use std::result::Result;
 use std::str::FromStr;
 use std::vec::IntoIter;
+
+mod command;
+mod reply;
 
 #[derive(PartialEq, Debug)]
 pub struct Message {
