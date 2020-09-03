@@ -1,5 +1,5 @@
 use super::{
-    Channel, CommandArgs, Key, KeywordList, Nickname, ParseError, Recipient, Sender, ServerMask,
+    Channel, Key, KeywordList, MessageParams, Nickname, ParseError, Recipient, Sender, ServerMask,
     Servername, StatsQuery, TargetMask, User,
 };
 use std::result::Result;
@@ -201,7 +201,7 @@ impl FromStr for Command {
             (raw, "")
         };
 
-        let args = raw_args.parse::<CommandArgs>()?;
+        let args = raw_args.parse::<MessageParams>()?;
 
         match (raw_command, args.len()) {
             ("PASS", 1) => Ok(Command::Pass {
