@@ -10,7 +10,7 @@ pub struct Client {
 impl Client {
     pub fn connect<T: net::ToSocketAddrs>(addr: T, auth_token: AuthToken) -> Client {
         let stream = net::TcpStream::connect(addr).expect("Could not connect to server.");
-        let mut connection = Connection::new(stream);
+        let mut connection = Connection::connect(stream);
 
         if let Some(command) = auth_token.pass() {
             connection
