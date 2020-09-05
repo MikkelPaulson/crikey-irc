@@ -10,29 +10,28 @@ pub struct Client {
 impl Client {
     pub fn connect<T: net::ToSocketAddrs>(addr: T, auth_token: AuthToken) -> Client {
         let stream = net::TcpStream::connect(addr).expect("Could not connect to server.");
-        let mut connection = Connection::connect(stream);
+        let connection = Connection::connect(stream);
+        let mut client = Client {
+            connection,
+            auth_token,
+        };
+        client.authenticate();
+        client
+    }
 
-        if let Some(command) = auth_token.pass() {
-            connection
+    fn authenticate(&mut self) {
+        if let Some(command) = self.auth_token.pass() {
+            self.connection
                 .send_command(command)
                 .expect("Could not authenticate with server.");
         }
 
-        connection
-            .send_command(auth_token.nick())
+        self.connection
+            .send_command(self.auth_token.nick())
             .expect("Could not authenticate with server.");
-        connection
-            .send_command(auth_token.user())
+        self.connection
+            .send_command(self.auth_token.user())
             .expect("Could not authenticate with server.");
-
-        Client::new(connection, auth_token)
-    }
-
-    fn new(connection: Connection, auth_token: AuthToken) -> Client {
-        Client {
-            connection,
-            auth_token,
-        }
     }
 
     pub fn poll(&mut self) -> bool {
@@ -75,6 +74,98 @@ impl Client {
     }
 }
 
+#[cfg(test)]
+mod test_client {
+    use super::*;
+    use pipe::pipe;
+    use std::io::prelude::*;
+    use std::thread::spawn;
+
+    fn get_token(password: Option<String>) -> AuthToken {
+        AuthToken {
+            nickname: "spudly".parse().unwrap(),
+            username: "pjohnson".parse().unwrap(),
+            mode: 0,
+            realname: "Potato Johnson".to_string(),
+            password,
+        }
+    }
+
+    fn spawn_client(
+        auth_token: AuthToken,
+        client_callback: fn(Client),
+    ) -> (pipe::PipeReader, pipe::PipeWriter) {
+        let (input_pipe_read, input_pipe_write) = pipe();
+        let (output_pipe_read, output_pipe_write) = pipe();
+
+        spawn(move || {
+            let connection =
+                Connection::new(Box::new(input_pipe_read), Box::new(output_pipe_write));
+            let client = Client {
+                connection,
+                auth_token,
+            };
+            client_callback(client);
+        });
+
+        (output_pipe_read, input_pipe_write)
+    }
+
+    #[test]
+    fn authenticate_without_password() {
+        let (mut reader, _) = spawn_client(get_token(None), |mut client| client.authenticate());
+
+        let mut buffer = String::new();
+        reader.read_line(&mut buffer).unwrap();
+        assert_eq!("NICK spudly\r\n".to_string(), buffer);
+
+        let mut buffer = String::new();
+        reader.read_line(&mut buffer).unwrap();
+        assert_eq!("USER pjohnson 0 * :Potato Johnson\r\n".to_string(), buffer);
+
+        let mut buffer = String::new();
+        reader.read_line(&mut buffer).unwrap();
+        assert_eq!("".to_string(), buffer);
+    }
+
+    #[test]
+    fn authenticate_with_password() {
+        let (mut reader, _) =
+            spawn_client(get_token(Some("secretpass".to_string())), |mut client| {
+                client.authenticate()
+            });
+
+        let mut buffer = String::new();
+        reader.read_line(&mut buffer).unwrap();
+        assert_eq!("PASS secretpass\r\n".to_string(), buffer);
+
+        let mut buffer = String::new();
+        reader.read_line(&mut buffer).unwrap();
+        assert_eq!("NICK spudly\r\n".to_string(), buffer);
+
+        let mut buffer = String::new();
+        reader.read_line(&mut buffer).unwrap();
+        assert_eq!("USER pjohnson 0 * :Potato Johnson\r\n".to_string(), buffer);
+
+        let mut buffer = String::new();
+        reader.read_line(&mut buffer).unwrap();
+        assert_eq!("".to_string(), buffer);
+    }
+
+    #[test]
+    fn responds_to_ping() {
+        let (mut reader, mut writer) = spawn_client(get_token(None), |mut client| {
+            client.poll();
+        });
+        write!(writer, "PING irc.example.com spudly\r\n").unwrap();
+
+        let mut buffer = String::new();
+        reader.read_line(&mut buffer).unwrap();
+        assert_eq!("PONG spudly irc.example.com\r\n", buffer);
+    }
+}
+
+#[derive(PartialEq, Debug)]
 pub struct AuthToken {
     pub nickname: Nickname,
     pub username: Username,
@@ -105,5 +196,61 @@ impl AuthToken {
             mode: self.mode,
             realname: self.realname.clone(),
         }
+    }
+}
+
+#[cfg(test)]
+mod test_auth_token {
+    use super::*;
+
+    fn get_token(password: Option<String>) -> AuthToken {
+        AuthToken {
+            nickname: "spudly".parse().unwrap(),
+            username: "pjohnson".parse().unwrap(),
+            mode: 0,
+            realname: "Potato Johnson".to_string(),
+            password,
+        }
+    }
+
+    #[test]
+    fn pass_none() {
+        let auth_token = get_token(None);
+        assert_eq!(None, auth_token.pass());
+    }
+
+    #[test]
+    fn pass_some() {
+        let auth_token = get_token(Some("secretpass".to_string()));
+        assert_eq!(
+            Some(Command::Pass {
+                password: "secretpass".to_string()
+            }),
+            auth_token.pass()
+        );
+    }
+
+    #[test]
+    fn nick() {
+        let auth_token = get_token(None);
+        assert_eq!(
+            Command::Nick {
+                nickname: "spudly".parse().unwrap()
+            },
+            auth_token.nick()
+        );
+    }
+
+    #[test]
+    fn user() {
+        let auth_token = get_token(None);
+        assert_eq!(
+            Command::User {
+                username: "pjohnson".parse().unwrap(),
+                mode: 0,
+                realname: "Potato Johnson".parse().unwrap()
+            },
+            auth_token.user()
+        );
     }
 }
