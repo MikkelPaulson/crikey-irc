@@ -7,12 +7,17 @@ mod client;
 mod connection;
 mod terminal;
 
-pub fn run<A: net::ToSocketAddrs>(addr: A) -> io::Result<()> {
+pub fn run<A: net::ToSocketAddrs>(
+    addr: A,
+    nickname: String,
+    username: String,
+    realname: String,
+) -> io::Result<()> {
     let token = client::AuthToken {
-        nickname: "spudly".parse().unwrap(),
-        username: "pjohnson".parse().unwrap(),
+        nickname: nickname.parse().unwrap(),
+        username: username.parse().unwrap(),
         mode: 0,
-        realname: "Potato Johnson".to_string(),
+        realname: realname,
         password: None,
     };
 
