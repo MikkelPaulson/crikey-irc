@@ -450,10 +450,19 @@ impl FromStr for Command {
                 from: None,
                 to: None,
             }),
-            ("PING", 1) => Ok(Command::Ping {
-                from: None,
-                to: Some(args[0].parse()?),
-            }),
+            ("PING", 1) => {
+                if raw_args.starts_with(':') {
+                    Ok(Command::Ping {
+                        from: Some(args[0].parse()?),
+                        to: None,
+                    })
+                } else {
+                    Ok(Command::Ping {
+                        from: None,
+                        to: Some(args[0].parse()?),
+                    })
+                }
+            }
             ("PING", 2) => Ok(Command::Ping {
                 from: Some(args[0].parse()?),
                 to: Some(args[1].parse()?),
@@ -667,17 +676,24 @@ mod tests {
         );
         assert_eq!(
             Ok(Command::Ping {
-                to: Some("myserver".parse().unwrap()),
-                from: None
+                to: None,
+                from: Some("spudly".parse().unwrap())
             }),
-            "PING myserver".parse::<Command>()
+            "PING :spudly".parse::<Command>()
         );
         assert_eq!(
             Ok(Command::Ping {
-                to: Some("myserver".parse().unwrap()),
-                from: Some("me".parse().unwrap())
+                to: Some("irc.example.com".parse().unwrap()),
+                from: None
             }),
-            "PING me myserver".parse::<Command>()
+            "PING irc.example.com".parse::<Command>()
+        );
+        assert_eq!(
+            Ok(Command::Ping {
+                to: Some("irc.example.com".parse().unwrap()),
+                from: Some("spudly".parse().unwrap())
+            }),
+            "PING spudly irc.example.com".parse::<Command>()
         );
         assert!("PING a b c".parse::<Command>().is_err());
     }

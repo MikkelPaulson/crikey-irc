@@ -66,9 +66,9 @@ mod test_message {
         assert_eq!(
             Ok(Message {
                 sender: Some("me".parse().unwrap()),
-                body: MessageBody::Reply(ReplyType::PrvWelcome, "Hi there".to_string())
+                body: MessageBody::Reply(ReplyType::PrvWelcome, ":Hi there".parse().unwrap())
             }),
-            ":me 001 Hi there\r\n".parse::<Message>()
+            ":me 001 :Hi there\r\n".parse::<Message>()
         );
         assert_eq!(
             Ok(Message {
@@ -84,10 +84,10 @@ mod test_message {
     #[test]
     fn string() {
         assert_eq!(
-            ":me 001 Hi there".to_string(),
+            ":me 001 :Hi there".to_string(),
             String::from(Message {
                 sender: Some("me".parse().unwrap()),
-                body: MessageBody::Reply(ReplyType::PrvWelcome, "Hi there".to_string())
+                body: MessageBody::Reply(ReplyType::PrvWelcome, ":Hi there".parse().unwrap())
             })
         );
         assert_eq!(
@@ -105,7 +105,7 @@ mod test_message {
 #[derive(PartialEq, Debug)]
 pub enum MessageBody {
     Command(Command),
-    Reply(ReplyType, String),
+    Reply(ReplyType, MessageParams),
 }
 
 impl FromStr for MessageBody {
@@ -118,10 +118,10 @@ impl FromStr for MessageBody {
                 if let Some(index) = raw.find(' ') {
                     Ok(MessageBody::Reply(
                         raw[..index].parse()?,
-                        raw[index + 1..].to_string(),
+                        raw[index + 1..].parse()?,
                     ))
                 } else {
-                    Ok(MessageBody::Reply(raw.parse()?, String::new()))
+                    Ok(MessageBody::Reply(raw.parse()?, MessageParams::new()))
                 }
             }
             _ => Err(ParseError::new("MessageBody")),
@@ -159,19 +159,25 @@ mod test_message_body {
     #[test]
     fn valid() {
         assert_eq!(
-            Ok(MessageBody::Reply(ReplyType::PrvWelcome, "".to_string())),
+            Ok(MessageBody::Reply(
+                ReplyType::PrvWelcome,
+                "".parse().unwrap()
+            )),
             "001".parse::<MessageBody>()
         );
         assert_eq!(
-            Ok(MessageBody::Reply(ReplyType::PrvWelcome, "".to_string())),
+            Ok(MessageBody::Reply(
+                ReplyType::PrvWelcome,
+                "".parse().unwrap()
+            )),
             "001 ".parse::<MessageBody>()
         );
         assert_eq!(
             Ok(MessageBody::Reply(
                 ReplyType::PrvWelcome,
-                "Hi there".to_string()
+                ":Hi there".parse().unwrap()
             )),
-            "001 Hi there".parse::<MessageBody>()
+            "001 :Hi there".parse::<MessageBody>()
         );
         assert_eq!(
             Ok(MessageBody::Command(Command::Nick {
@@ -184,10 +190,10 @@ mod test_message_body {
     #[test]
     fn string() {
         assert_eq!(
-            "001 Hi there".to_string(),
+            "001 :Hi there".to_string(),
             String::from(MessageBody::Reply(
                 ReplyType::PrvWelcome,
-                "Hi there".to_string()
+                ":Hi there".parse().unwrap()
             ))
         );
         assert_eq!(

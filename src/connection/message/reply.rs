@@ -1,11 +1,11 @@
-use super::ParseError;
+use super::{MessageParams, ParseError};
 use std::result::Result;
 use std::str::FromStr;
 
 #[derive(PartialEq, Debug)]
 pub struct Reply {
     pub reply_type: ReplyType,
-    pub reply_message: String,
+    pub params: MessageParams,
 }
 
 impl FromStr for Reply {
@@ -19,7 +19,7 @@ impl FromStr for Reply {
         if let Ok(reply_type) = raw[..3].parse() {
             Ok(Reply {
                 reply_type,
-                reply_message: raw[3..].to_string(),
+                params: raw[3..].parse()?,
             })
         } else {
             Err(ParseError::new("Reply"))
@@ -31,7 +31,7 @@ impl From<Reply> for String {
     fn from(reply: Reply) -> String {
         let mut reply_text = String::from(reply.reply_type);
         reply_text.push(' ');
-        reply_text.push_str(&reply.reply_message);
+        reply_text.push_str(&String::from(reply.params));
         reply_text
     }
 }
@@ -492,11 +492,7 @@ mod tests {
 
     #[test]
     fn all_values_in_range() {
-        for number in 1..=599 {
-            if let 100..=199 = number {
-                continue;
-            }
-
+        for number in (1..=99).chain(200..=599) {
             let number_formatted = format!("{:0>3}", number);
             assert_eq!(
                 number_formatted,
