@@ -18,35 +18,35 @@ impl Data {
             server_port: 0,
         }
     }
-}
 
-pub fn get() -> Data {
-    let config_vec = configster::parse_file("./crikeyrc", ',').expect("Error reading config file");
-    let mut config_data = Data::new();
-    for i in &config_vec {
-        match i.option.as_ref() {
-            "realname" => config_data.realname = i.value.primary.clone(),
-            "nick" => config_data.nick = i.value.primary.clone(),
-            "password" => config_data.password = i.value.primary.clone(),
-            "server_addr" => {
-                config_data.server_addr = i.value.primary.clone();
-                match i.value.attributes.get(0).is_some() {
-                    true => {
-                        config_data.server_port =
-                            i.value.attributes[0].parse().expect("Invalid port number")
+    pub fn get(&mut self) {
+        let config_vec =
+            configster::parse_file("./crikeyrc", ',').expect("Error reading config file");
+        for i in &config_vec {
+            match i.option.as_ref() {
+                "realname" => self.realname = i.value.primary.clone(),
+                "nick" => self.nick = i.value.primary.clone(),
+                "password" => self.password = i.value.primary.clone(),
+                "server_addr" => {
+                    self.server_addr = i.value.primary.clone();
+                    match i.value.attributes.get(0).is_some() {
+                        true => {
+                            self.server_port =
+                                i.value.attributes[0].parse().expect("Invalid port number")
+                        }
+                        false => println!("No port option given for server"),
                     }
-                    false => println!("No port option given for server"),
                 }
+                _ => println!("Invalid Option"),
             }
-            _ => println!("Invalid Option"),
         }
     }
-    config_data
 }
 
 #[test]
 fn test_config_getter() {
-    let config_data = get();
+    let mut config_data = Data::new();
+    config_data.get();
     assert_eq!(config_data.realname, "Potato Johnson".to_string());
     assert_eq!(config_data.nick, "spudly".to_string());
     assert_eq!(config_data.server_addr, "127.0.0.1".to_string());

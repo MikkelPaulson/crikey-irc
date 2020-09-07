@@ -4,7 +4,8 @@ use std::io;
 mod config;
 
 fn main() -> io::Result<()> {
-    let config_data = config::get();
+    let mut config_data = config::Data::new();
+    config_data.get();
     let server_addr = env::args().nth(1).unwrap_or(format!(
         "{}:{}",
         config_data.server_addr, config_data.server_port
