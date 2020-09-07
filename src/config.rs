@@ -43,3 +43,12 @@ pub fn get() -> Data {
     }
     config_data
 }
+
+#[test]
+fn test_config_getter() {
+    let config_data = get();
+    assert_eq!(config_data.realname, "Potato Johnson".to_string());
+    assert_eq!(config_data.nick, "spudly".to_string());
+    assert_eq!(config_data.server_addr, "127.0.0.1".to_string());
+    assert_eq!(config_data.server_port, 6667);
+}
