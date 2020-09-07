@@ -212,8 +212,8 @@ pub struct MessageParams {
 }
 
 impl MessageParams {
-    pub fn new() -> MessageParams {
-        MessageParams {
+    pub fn new() -> Self {
+        Self {
             args: Vec::new(),
             has_space: false,
         }
@@ -236,6 +236,13 @@ impl MessageParams {
 
     pub fn get(&self, index: usize) -> Option<&String> {
         self.args.get(index)
+    }
+
+    pub fn to_string_with_prefix(self, prefix: &str) -> String {
+        let mut result = String::from(prefix);
+        result.push(' ');
+        result.push_str(&String::from(self));
+        result
     }
 }
 
@@ -290,6 +297,7 @@ impl FromStr for MessageParams {
 impl From<MessageParams> for String {
     fn from(command_args: MessageParams) -> String {
         let mut result = String::new();
+        let mut last_elment_is_empty = false;
 
         for arg in command_args.args {
             if !result.is_empty() {
@@ -298,9 +306,30 @@ impl From<MessageParams> for String {
             if arg.contains(' ') {
                 result.push(':');
             }
-            result.push_str(&arg);
+
+            if arg == "" {
+                result.push('*');
+                last_elment_is_empty = true;
+            } else {
+                result.push_str(&arg);
+                last_elment_is_empty = false;
+            }
+        }
+        if last_elment_is_empty {
+            result.pop();
+            result.push(':');
         }
         result
+    }
+}
+
+impl From<Vec<String>> for MessageParams {
+    fn from(original: Vec<String>) -> Self {
+        let mut message_params = Self::new();
+        for arg in original.into_iter() {
+            message_params.push(arg).unwrap();
+        }
+        message_params
     }
 }
 
