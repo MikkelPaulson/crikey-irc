@@ -32,12 +32,8 @@ pub fn get() -> Data {
                 config_data.server_addr = i.value.primary.clone();
                 match i.value.attributes.get(0).is_some() {
                     true => {
-                        if i.value.attributes[0] == "server_port" {
-                            config_data.server_port =
-                                i.value.attributes[0].parse().expect("Invalid port number")
-                        } else {
-                            println!("Invalid port value");
-                        }
+                        config_data.server_port =
+                            i.value.attributes[0].parse().expect("Invalid port number")
                     }
                     false => println!("No port option given for server"),
                 }
