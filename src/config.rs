@@ -1,5 +1,6 @@
 use configster;
 use std::env;
+use std::io;
 
 pub fn get_filename(homedir: &str) -> String {
     let config_home: String = match env::var("XDG_CONFIG_HOME") {
@@ -24,14 +25,14 @@ pub struct Data {
 }
 
 impl Data {
-    pub fn load(path: &str) -> Self {
+    pub fn load(path: &str) -> io::Result<Self> {
         let mut c = Self {
             realname: String::new(),
             nick: String::new(),
             password: String::new(),
             server_addr: String::new(),
         };
-        let config_vec = configster::parse_file(path, ',').expect("Error reading config file");
+        let config_vec = configster::parse_file(path, ',')?;
         for i in &config_vec {
             match i.option.as_ref() {
                 "realname" => c.realname = i.value.primary.clone(),
@@ -41,7 +42,7 @@ impl Data {
                 _ => println!("Invalid Option"),
             }
         }
-        c
+        Ok(c)
     }
 }
 
@@ -49,7 +50,7 @@ impl Data {
 fn test_config_getter() {
     let config_data = Data::load("./crikeyrc.example");
     assert_eq!(
-        config_data,
+        config_data.unwrap(),
         Data {
             realname: "Potato Johnson".to_string(),
             nick: "spudly".to_string(),

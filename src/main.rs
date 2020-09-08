@@ -15,7 +15,7 @@ fn main() -> io::Result<()> {
     };
 
     let config_file = config::get_filename(&homedir);
-    let config_data = config::Data::load(&config_file);
+    let config_data = config::Data::load(&config_file)?;
 
     let server_addr = env::args().nth(1).unwrap_or(config_data.server_addr);
     let nick = env::args().nth(2).unwrap_or(config_data.nick);
