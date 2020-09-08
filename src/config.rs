@@ -6,7 +6,6 @@ pub struct Data {
     pub nick: String,
     pub password: String,
     pub server_addr: String,
-    pub server_port: u32,
 }
 
 impl Data {
@@ -16,7 +15,6 @@ impl Data {
             nick: String::new(),
             password: String::new(),
             server_addr: String::new(),
-            server_port: 0,
         }
     }
 
@@ -28,16 +26,7 @@ impl Data {
                 "realname" => self.realname = i.value.primary.clone(),
                 "nick" => self.nick = i.value.primary.clone(),
                 "password" => self.password = i.value.primary.clone(),
-                "server_addr" => {
-                    self.server_addr = i.value.primary.clone();
-                    match i.value.attributes.get(0).is_some() {
-                        true => {
-                            self.server_port =
-                                i.value.attributes[0].parse().expect("Invalid port number")
-                        }
-                        false => println!("No port option given for server"),
-                    }
-                }
+                "server_addr" => self.server_addr = i.value.primary.clone(),
                 _ => println!("Invalid Option"),
             }
         }
@@ -54,8 +43,7 @@ fn test_config_getter() {
             realname: "Potato Johnson".to_string(),
             nick: "spudly".to_string(),
             password: String::from(""),
-            server_addr: "127.0.0.1".to_string(),
-            server_port: 6667
+            server_addr: "127.0.0.1:6667".to_string(),
         }
     );
 }
