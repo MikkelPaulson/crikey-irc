@@ -18,9 +18,8 @@ impl Data {
         }
     }
 
-    pub fn get(&mut self) {
-        let config_vec =
-            configster::parse_file("./crikeyrc", ',').expect("Error reading config file");
+    pub fn get(&mut self, path: &str) {
+        let config_vec = configster::parse_file(path, ',').expect("Error reading config file");
         for i in &config_vec {
             match i.option.as_ref() {
                 "realname" => self.realname = i.value.primary.clone(),
@@ -36,7 +35,7 @@ impl Data {
 #[test]
 fn test_config_getter() {
     let mut config_data = Data::new();
-    config_data.get();
+    config_data.get("./crikeyrc.example");
     assert_eq!(
         config_data,
         Data {
