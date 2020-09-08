@@ -1,5 +1,6 @@
 use configster;
 
+#[derive(Debug, PartialEq)]
 pub struct Data {
     pub realname: String,
     pub nick: String,
@@ -47,8 +48,14 @@ impl Data {
 fn test_config_getter() {
     let mut config_data = Data::new();
     config_data.get();
-    assert_eq!(config_data.realname, "Potato Johnson".to_string());
-    assert_eq!(config_data.nick, "spudly".to_string());
-    assert_eq!(config_data.server_addr, "127.0.0.1".to_string());
-    assert_eq!(config_data.server_port, 6667);
+    assert_eq!(
+        config_data,
+        Data {
+            realname: "Potato Johnson".to_string(),
+            nick: "spudly".to_string(),
+            password: String::from(""),
+            server_addr: "127.0.0.1".to_string(),
+            server_port: 6667
+        }
+    );
 }
