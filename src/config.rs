@@ -24,33 +24,30 @@ pub struct Data {
 }
 
 impl Data {
-    pub fn new() -> Self {
-        Self {
+    pub fn load(path: &str) -> Self {
+        let mut c = Self {
             realname: String::new(),
             nick: String::new(),
             password: String::new(),
             server_addr: String::new(),
-        }
-    }
-
-    pub fn get(&mut self, path: &str) {
+        };
         let config_vec = configster::parse_file(path, ',').expect("Error reading config file");
         for i in &config_vec {
             match i.option.as_ref() {
-                "realname" => self.realname = i.value.primary.clone(),
-                "nick" => self.nick = i.value.primary.clone(),
-                "password" => self.password = i.value.primary.clone(),
-                "server_addr" => self.server_addr = i.value.primary.clone(),
+                "realname" => c.realname = i.value.primary.clone(),
+                "nick" => c.nick = i.value.primary.clone(),
+                "password" => c.password = i.value.primary.clone(),
+                "server_addr" => c.server_addr = i.value.primary.clone(),
                 _ => println!("Invalid Option"),
             }
         }
+        c
     }
 }
 
 #[test]
 fn test_config_getter() {
-    let mut config_data = Data::new();
-    config_data.get("./crikeyrc.example");
+    let config_data = Data::load("./crikeyrc.example");
     assert_eq!(
         config_data,
         Data {
