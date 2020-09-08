@@ -1,4 +1,6 @@
-use crate::connection::{Command, Connection, Message, MessageBody, Nickname, ReplyType, Username};
+use crate::connection::{
+    Command, Connection, Message, MessageBody, MessageParams, Nickname, ReplyType, Username,
+};
 use std::io;
 use std::net;
 
@@ -67,7 +69,7 @@ impl Client {
         }
     }
 
-    fn handle_reply(&self, _reply_type: ReplyType, _reply_body: String) {}
+    fn handle_reply(&self, _reply_type: ReplyType, _reply_body: MessageParams) {}
 
     pub fn send_command_raw(&mut self, raw_command: String) -> io::Result<()> {
         self.connection.send_command_raw(raw_command)

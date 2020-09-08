@@ -12,6 +12,10 @@ impl<T: FromStr + Into<String>> KeywordList<T> {
     pub fn push(&mut self, element: T) {
         self.0.push(element)
     }
+
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
 }
 
 impl<T: FromStr + Into<String>> FromStr for KeywordList<T> {
