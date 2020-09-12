@@ -1,17 +1,21 @@
-use configster;
 use std::env;
 use std::io;
 
 pub fn get_filename(homedir: &str) -> String {
     let config_home: String = match env::var("XDG_CONFIG_HOME") {
         Ok(val) => val,
-        Err(_e) => format!("{}{}", homedir, "/.config").to_string(),
+        Err(_e) => format!("{}{}", homedir, "/.config"),
     };
 
-    let mut config_file = config_home + "/crikeyrc";
+    let config_file = config_home + "/crikeyrc";
 
     if !std::path::Path::new(&config_file).exists() {
-        config_file = "./crikeyrc".to_string();
+        println!("Creating config file: {}", &config_file);
+        std::fs::write(
+            &config_file,
+            "realname = Potato Johnson\nnick = spudly\nserver_addr = 127.0.0.1:6667\n",
+        )
+        .expect("Unable to create config file");
     }
     config_file
 }
