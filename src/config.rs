@@ -13,7 +13,7 @@ pub fn get_filename(homedir: &str) -> String {
         println!("Creating config file: {}", &config_file);
         std::fs::write(
             &config_file,
-            "realname = Potato Johnson\nnick = spudly\nserver_addr = 127.0.0.1:6667\n",
+            "realname = Potato Johnson\nnick = spudly\nusername = pjohnson\nserver_addr = 127.0.0.1:6667\n",
         )
         .expect("Unable to create config file");
     }
@@ -24,6 +24,7 @@ pub fn get_filename(homedir: &str) -> String {
 pub struct Data {
     pub realname: String,
     pub nick: String,
+    pub username: String,
     pub password: String,
     pub server_addr: String,
 }
@@ -33,6 +34,7 @@ impl Data {
         let mut c = Self {
             realname: String::new(),
             nick: String::new(),
+            username: String::new(),
             password: String::new(),
             server_addr: String::new(),
         };
@@ -41,6 +43,7 @@ impl Data {
             match i.option.as_ref() {
                 "realname" => c.realname = i.value.primary.clone(),
                 "nick" => c.nick = i.value.primary.clone(),
+                "username" => c.username = i.value.primary.clone(),
                 "password" => c.password = i.value.primary.clone(),
                 "server_addr" => c.server_addr = i.value.primary.clone(),
                 _ => println!("Invalid Option"),
@@ -58,6 +61,7 @@ fn test_config_getter() {
         Data {
             realname: "Potato Johnson".to_string(),
             nick: "spudly".to_string(),
+            username: "pjohnson".to_string(),
             password: String::from(""),
             server_addr: "127.0.0.1:6667".to_string(),
         }
