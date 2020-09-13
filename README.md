@@ -1,9 +1,16 @@
-# IRustC Bot
+# Crikey IRC
 
-An IRC bot implemented in Rust. This is a learning project for me, so the
-priority is correctly implementing the IRC protocol in idiomatic Rust. Maybe
-once that's done I'll want to continue development into a fully-functional bot,
-or make this into one or more Cargo crates.
+An IRC library implemented in Rust. This is a learning project for me, so the
+priority is correctly implementing the IRC protocol in idiomatic Rust.
+
+The ultimate plan for this project is to split it into multiple crates as
+follows:
+
+* crikey-irc-common: A library providing protocol and state tracking services,
+  to be consumed by both the client and server
+* crikey-irc-client: A library for writing IRC clients, bots, and services.
+  * crikey-irc-bot: Basically just an example script for crikey-irc-client.
+* crikey-irc-server: A library + binary implementing the IRC server protocol.
 
 ## Getting started (for users)
 
@@ -17,34 +24,37 @@ To get up and running with a local environment, you will need
 provided with your Docker install). You do not need Rust installed on your host
 machine, though it's obviously useful if you intend to write code.
 
-Next, check out the repository. From the project root, run:
+Once Docker is set up, you can run crikey-irc using:
 
     docker-compose build
-    docker-compose run --rm irustc-bot
+    docker-compose run --rm crikey-irc
 
-The "command line" provided by irustc-bot allows you to send commands directly
-to the IRC server using the bot's connection. To quit the bot, close the
+The "command line" provided by crikey-irc allows you to send commands directly
+to the IRC server using the client's connection. To quit the client, close the
 connection by typing `QUIT`.
 
-The IRC server will continue running in the background after the bot has been
+The IRC server will continue running in the background after the client has been
 shut down. This is a limitation with Docker Compose. It can be shut down using
 
     docker-compose down
 
 ## Current state of development
 
-The bot currently successfully connects to an IRC server (currently hard-coded).
-It then authenticates with the server (credentials also hard-coded). All data
-sent and received is output in raw form directly to the terminal, where the user
-can type additional commands. There is no further automation in place, including
-responding to PING commands, so without human intervention, the connection will
-time out after a few minutes.
+The bot opens a TCP connection to an IRC server and performs the authentication
+handshake (NICK/USER). Incoming messages are parsed and output to the terminal
+using the various structs and enums defined by the connection. The user can type
+additional raw commands at the command line, which will be transmitted to the
+server verbatim. The client automatically responds to PING messages received
+from the server.
+
+Almost all documented client commands have been implemented in the parsing
+library, and the examples from RFC 2812 have all been implemented as unit tests.
 
 ## Modules
 
-### connection.rs
+### connection
 
-**State of development: done**
+**State of development: done, some polish needed**
 
 Handles the basic reading and writing of strings to/from the TCP connection with
 the IRC server. The IRC protocol consists of
@@ -52,67 +62,35 @@ the IRC server. The IRC protocol consists of
 [replies](https://tools.ietf.org/html/rfc2812#section-2.4), which are
 respectively converted by the `Connection` into `Command` and `ReplyType` enums.
 
-### dispatcher.rs
+### state
 
-**State of development: mostly done, might need tweaks**
+**State of development: not started (issue #21)**
 
-The IRC protocol is inherently asynchronous and non-blocking, so callbacks are
-used to notify interested parts of the application of particular incoming
-messages. As IRC divides its protocol into messages and replies, the dispatcher
-maintains sets of command listeners and of reply listeners. Owing to differences
-in use cases, these listeners behave differently:
+Persists the known state of the IRC network. This includes known users,
+channels, etc.
 
-**Command listeners** (`register_command_listener`/`handle_command`) are
-permanent callbacks that are registered for a given `CommandType`, eg.
-`Privmsg`. Every time a `Command` is received from the server, all registered
-listeners for that type are invoked.
-
-**Reply listeners** (`register_reply_listener`/`handle_reply`) are intended to
-be ephemeral and are called for _all_ received replies. It is then the
-responsibility of the listener to decide 1) what action, if any, to take for a
-given reply, and 2) whether or not it wishes to remain registered, which it
-communicates to the dispatcher by returning `true` (remain registered) or
-`false` (deregister).
-
-For instance, if I run the
-[WHOIS command](https://tools.ietf.org/html/rfc2812#section-3.6.2), I expect the
-server to respond with a series of `ReplyType`s including `RplWhoIsUser`,
-`RplWhoIsServer`, etc., concluding with `RplEndOfWhoIs`. An implementation of
-this would register a callback that ignores all replies except for the types
-that it is interested in, collates the relevant data from those replies, then
-deregisters itself once it receives `RplEndOfWhoIs`.
-
-TODO: There is currently no timeout for reply listeners, but they should
-probably automatically deregister after a period of time, with the assumption
-that the anticipated message has been dropped.
-
-TODO: It may make sense to have the dispatcher only execute the first interested
-listener, then stop evaluating further callbacks. This might alleviate (or maybe
-exacerbate) race conditions where we're waiting on responses to multiple
-commands at once. Unfortunately, the protocol doesn't provide for "I am replying
-to the command ID 123, please route my message accordingly".
-
-### client.rs
+### client
 
 **State of development: started (issue #3)**
 
 The `Client` applies a semantic layer on top of the `Connection`. While the
-`Connection` sends and receives enums, it makes no attempt to understand their
-meaning. The `Client` will expose methods that represent actual IRC actions, such
-as `send_message()` or `join_channel()`. It will also handle replying to `PING`
-messages received from the server.
+`Connection` sends and receives commands, it makes no attempt to understand
+their meaning. The `Client` will expose methods that represent actual IRC
+actions, such as `send_message()` or `join_channel()`. It will also
+handle replying to `PING` messages received from the server.
 
-It may also be the responsibility of the `Client` to maintain a persistent set of
-value objects for things like Channels and Users.
+It may also be the responsibility of the `Client` to maintain a persistent set
+of value objects for things like Channels and Users.
 
-### bot.rs
+### bot
 
 **State of development: not started (issue #4)**
 
-The `Bot` will interact with the `Client` to define automated behaviour flows, such
-as responding to user messages or watching for particular keywords in a channel.
+The `Bot` will interact with the `Client` to define automated behaviour flows,
+such as responding to user messages or watching for particular keywords in a
+channel.
 
-### terminal.rs
+### terminal
 
 **State of development: done**
 
