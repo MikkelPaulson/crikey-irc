@@ -1,5 +1,5 @@
 use std::env;
-use std::io;
+use std::io::{self, Error, ErrorKind};
 
 pub fn get_filename(homedir: &str) -> String {
     let config_home: String = match env::var("XDG_CONFIG_HOME") {
@@ -46,7 +46,7 @@ impl Data {
                 "username" => c.username = i.value.primary.clone(),
                 "password" => c.password = i.value.primary.clone(),
                 "server_addr" => c.server_addr = i.value.primary.clone(),
-                _ => println!("Invalid Option"),
+                _ => return Err(Error::new(ErrorKind::InvalidData, "Invalid Option")),
             }
         }
         Ok(c)
