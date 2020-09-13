@@ -1,5 +1,5 @@
 [package]
-name = "irustc_bot"
+name = "crikey-irc"
 version = "0.1.0"
 authors = ["Mikkel Paulson <git@email.mikkel.ca>"]
 edition = "2018"

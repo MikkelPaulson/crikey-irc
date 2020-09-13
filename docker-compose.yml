@@ -8,16 +8,16 @@ services:
     #ports:
     #  - 6667
 
-  irustc-bot:
+  crikey-irc:
     build:
       context: .
     depends_on:
       - irc-server
     volumes:
-      - ./src:/usr/src/irustc-bot/src
-      - ./tests:/usr/src/irustc-bot/tests
-      - ./Cargo.lock:/usr/src/irustc-bot/Cargo.lock
-      - ./Cargo.toml:/usr/src/irustc-bot/Cargo.toml
+      - ./src:/usr/src/crikey-irc/src
+      - ./tests:/usr/src/crikey-irc/tests
+      - ./Cargo.lock:/usr/src/crikey-irc/Cargo.lock
+      - ./Cargo.toml:/usr/src/crikey-irc/Cargo.toml
     command:
       - cargo
       - run

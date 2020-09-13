@@ -1,6 +1,6 @@
 FROM rust:1.45-alpine
 
-WORKDIR /usr/src/irustc-bot
+WORKDIR /usr/src/crikey-irc
 
 COPY Cargo.lock Cargo.lock
 COPY Cargo.toml Cargo.toml

@@ -19,7 +19,7 @@ pub fn connect<A: net::ToSocketAddrs>(addr: A) -> (Client, Server) {
 
     // Flush client auth and respond with boilerplate welcome text
     server.truncate();
-    server.write_line(":irc.example.net 001 spudly :Welcome to the Internet Relay Network baz!~pjohnson@ircbot_irustc-bot_run_33951ac1d023.ircbot_default");
+    server.write_line(":irc.example.net 001 spudly :Welcome to the Internet Relay Network baz!~pjohnson@ircbot_crikey-irc_run_33951ac1d023.ircbot_default");
     server.write_line(":irc.example.net 002 spudly :Your host is irc.example.net, running version ngircd-23 (x86_64/alpine/linux-musl)");
     server.write_line(":irc.example.net 003 spudly :This server has been started Fri Aug 21 2020 at 03:21:11 (UTC)");
     server.write_line(":irc.example.net 004 spudly irc.example.net ngircd-23 abBcCFiIoqrRswx abehiIklmMnoOPqQrRstvVz");
@@ -46,7 +46,7 @@ impl Client {
     pub fn new<A: net::ToSocketAddrs>(addr: &A) -> Client {
         let server_ip: String = addr.to_socket_addrs().unwrap().next().unwrap().to_string();
 
-        let child = process::Command::new("target/debug/irustc_bot")
+        let child = process::Command::new("target/debug/crikey-irc")
             .arg(&server_ip)
             .stdin(process::Stdio::null())
             .stdout(process::Stdio::null())

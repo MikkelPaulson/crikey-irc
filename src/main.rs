@@ -1,4 +1,4 @@
-use irustc_bot::run;
+use crikey_irc::run;
 use std::env;
 use std::io;
 
